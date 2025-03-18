@@ -21,8 +21,8 @@ interface Response {
 
 export default function ProductSupplies() {
     const router = useRouter();
-    const [email, setEmail] = useState<string>("fy@gmail.com");
-    const [password, setPassword] = useState<string>("12345678");
+    const [email, setEmail] = useState<string>("");
+    const [password, setPassword] = useState<string>("");
     const { isLoggedIn, setIsLoggedIn } = useAppContext()
     
     const [status, setStatus] = useState<"success" | "error" | null>(null);
