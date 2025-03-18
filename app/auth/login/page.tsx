@@ -5,7 +5,7 @@ import { Notification } from '@mantine/core';
 import { postData } from '@/utils/api';
 import { useAppContext } from '@/context';
 import { useRouter } from "next/navigation";
-
+import Link from 'next/link'
 
 
 interface Response {
@@ -27,8 +27,6 @@ export default function ProductSupplies() {
     
     const [status, setStatus] = useState<"success" | "error" | null>(null);
     const [message, setMessage] = useState<string>("");
-    const xIcon = <IconX size={20} />;
-    const checkIcon = <IconCheck size={20} />;
     
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -102,12 +100,21 @@ export default function ProductSupplies() {
                             type="password" 
                             id="password" 
                             className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" 
+                            placeholder="********" 
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required />
                     </div>
                     <div className='flex justify-center'>
-                        <button type="submit" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center">Submit</button>
+                        <button type="submit" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center">Login</button>
+                    </div>
+                    <div className="mt-4 text-center">
+                        <span className="text-sm text-gray-600">
+                            Don't have an account?{" "}
+                            <Link href="/auth/register" className="text-blue-500 hover:underline">
+                                Click here to register
+                            </Link>
+                        </span>
                     </div>
                 </form>
                 

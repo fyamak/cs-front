@@ -9,6 +9,12 @@ interface Product {
     name: string;
 }
 
+interface Response {
+  data: Product[]
+  message: string,
+  status: string
+}
+
 
 const page = () => {
     const [token, setToken] = useState<string | null>(null);
@@ -18,8 +24,8 @@ const page = () => {
     const fetchProducts = async () => {
         try {
             const res = await getData("products");
-            const response : { data: Product[] } = res.data 
-            setProducts(response.data);
+            const response : Response = res.data
+            setProducts(response.data || []);
 
         } catch (error) {
             console.log('Error fetching products:', error);

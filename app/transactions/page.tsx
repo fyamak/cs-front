@@ -27,8 +27,6 @@ const TransactionsPage = () => {
 
     const [status, setStatus] = useState<"success" | "error" | null>(null);
     const [message, setMessage] = useState<string>("");
-    const xIcon = <IconX size={20} />;
-    const checkIcon = <IconCheck size={20} />;
     
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
