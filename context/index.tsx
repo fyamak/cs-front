@@ -6,13 +6,11 @@ const AppContext = createContext<any>(undefined)
 export function AppWrapper({ children } : {
     children: React.ReactNode
 }) {
-    const [name, setName] = useState("defaultName")
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [currency, setCurrency] = useState("$")
 
     return (
         <AppContext.Provider value={{
-            name, setName,
-            isLoggedIn, setIsLoggedIn
+            currency, setCurrency
         }
         }>
             {children}
