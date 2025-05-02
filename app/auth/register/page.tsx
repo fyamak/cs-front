@@ -29,7 +29,7 @@ const RegisterPage = () => {
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault()
-        const formData = { fullName, email, password }
+        const formData = { fullName, email, password, phoneNumber }
         
         try {
             const res = await postData("register", formData)
@@ -62,7 +62,7 @@ const RegisterPage = () => {
         <div className="flex h-screen">
             <div className="flex-1 flex items-center justify-center text-lg font-semibold">
                 {status && (
-                    <div className="fixed top-28 left-5">
+                    <div className="fixed top-28 right-5">
                         <Notification
                             withCloseButton={false}
                             icon={status === "success" ? <IconCheck size={20} /> : <IconX size={20} />}

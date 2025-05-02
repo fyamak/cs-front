@@ -11,7 +11,12 @@ interface Product {
   sku: string,
   name: string,
   totalQuantity: number,
-  category: string
+  categoryId: number
+}
+
+interface Category{
+  id: number,
+  name: string
 }
 
 interface Response {
@@ -23,13 +28,20 @@ interface Response {
 
 export default function InventoryPage() {
   const [search, setSearch] = useState("")
-  const [category, setCategory] = useState("all")
+  const [category, setCategory] = useState(0)
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isModalOpen, setModalOpen] = useState(false);
 
+  const categoryMap = useMemo(() => {
+    const map = new Map<number, string>()
+    categories.forEach(cat => map.set(cat.id, cat.name))
+    return map
+  }, [categories])
 
   useEffect(() => {
-    fetchProducts()
+    fetchProducts();
+    fetchCategories();
   }, [])
   
   
@@ -37,7 +49,7 @@ export default function InventoryPage() {
     return products.filter((product) => {
       const lowerSearch = search.toLowerCase();
       const matchesSearch = product.name.toLowerCase().includes(lowerSearch) || product.sku.toLowerCase().includes(lowerSearch);
-      const matchesCategory = category === "all" || product.category.toLowerCase() === category.toLowerCase();
+      const matchesCategory = category === 0 || product.categoryId === category;
       return matchesSearch && matchesCategory;
     });
   }, [products, search, category]);
@@ -49,7 +61,20 @@ export default function InventoryPage() {
         const response : Response = res.data
         setProducts(response.data || []);
     } catch (error) {
-        console.log('Error fetching products:', error);
+        console.error('Error fetching products:', error);
+    }
+  }
+
+  const fetchCategories = async () => {
+    try
+    {
+      const res = await getData("api/category")
+      const response = res.data
+      setCategories(response.data)
+    }
+    catch(error)
+    {
+      console.error('Error fetching categories:', error)
     }
   }
 
@@ -73,8 +98,7 @@ export default function InventoryPage() {
            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition"
            onClick={() => setModalOpen(true)}
           >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Product
+          New Product
         </button>
       </div>
 
@@ -89,12 +113,16 @@ export default function InventoryPage() {
         <select
           className="w-[200px] px-3 py-2 border rounded-md text-sm"
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          onChange={(e) => setCategory(Number(e.target.value))}
         >
-          <option value="all">All Categories</option>
-          <option value="electronics">Electronics</option>
-          <option value="furniture">Furniture</option>
-          <option value="office">Office Supplies</option>
+          <option value={0}>All Categories</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))
+
+          }
         </select>
       </div>
 
@@ -118,7 +146,7 @@ export default function InventoryPage() {
                     </Link>
                     </td>
                 <td className="px-4 py-2">{product.sku}</td>
-                <td className="px-4 py-2">{product.category}</td>
+                <td className="px-4 py-2">{categoryMap.get(product.categoryId)?? "Unknown"}</td>
                 <td className="px-4 py-2">{product.totalQuantity}</td>
                 <td className="px-4 py-2">{getStockBadge(product.totalQuantity)}</td>
               </tr>

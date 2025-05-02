@@ -104,7 +104,7 @@ export default function TransactionsPage() {
             <label className="block text-sm text-gray-600 mb-1">Start Date</label>
             <input
               type="date"
-              className="w-full px-3 py-2 border rounded-md shadow-sm"
+              className="w-full px-3 py-2 border rounded-md shadow-sm bg-white"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               required
@@ -114,7 +114,7 @@ export default function TransactionsPage() {
             <label className="block text-sm text-gray-600 mb-1">End Date</label>
             <input
               type="date"
-              className="w-full px-3 py-2 border rounded-md shadow-sm"
+              className="w-full px-3 py-2 border rounded-md shadow-sm bg-white"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               required

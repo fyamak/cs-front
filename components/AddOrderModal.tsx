@@ -196,7 +196,7 @@ const AddOrderModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClose
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-900">
-                Category
+                Date
               </label>
               <input
                 type="datetime-local"

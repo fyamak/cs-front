@@ -4,7 +4,7 @@ import { useAppContext } from "@/context"
 import { useEffect, useState } from "react"
 import { Notification } from '@mantine/core';
 import { IconX, IconCheck } from '@tabler/icons-react';
-import { postData } from "@/utils/api";
+import { patchData, postData } from "@/utils/api";
 
 interface User {
   id: number,
@@ -13,7 +13,7 @@ interface User {
   phoneNumber: string,
   currency: string,
   receiveEmail: boolean,
-  recieveLowStockAlert: boolean,
+  receiveLowStockAlert: boolean,
   userType: string
 }
 
@@ -25,11 +25,11 @@ interface Response {
 
 
 export default function SettingsPage() {
-  const [fullName, setFullName] = useState<string>()
-  const [phoneNumber, setPhoneNumber] = useState<string>()
-  const [notifications, setNotifications] = useState<boolean>()
-  const [lowStockAlerts, setLowStockAlerts] = useState<boolean>()
-  const [localCurrency, setLocalCurrency] = useState<string>()
+  const [fullName, setFullName] = useState<string>("")
+  const [phoneNumber, setPhoneNumber] = useState<string>("")
+  const [receiveEmail, setReceiveEmail] = useState<boolean>(false)
+  const [receiveLowStockAlert, setReceiveLowStockAlert] = useState<boolean>(false)
+  const [localCurrency, setLocalCurrency] = useState<string>("")
 
   const [user, setUser] = useState<User>()
   const { currency, setCurrency } = useAppContext()
@@ -45,31 +45,94 @@ export default function SettingsPage() {
     try {
       const res = await postData("GetProfileInfo", {})
       const response: Response = res.data
-      setUser(response.data)
-      setCurrency(response.data.currency)
+      const userData = response.data
+
+      console.log(userData)
+
+      if (response.status === "Success") {
+        setUser(userData)
+        setCurrency(userData.currency)
+        
+        setFullName(userData.fullName || "");
+        setPhoneNumber(userData.phoneNumber || "");
+        setReceiveEmail(userData.receiveEmail);
+        setReceiveLowStockAlert(userData.receiveLowStockAlert);
+        setLocalCurrency(userData.currency || "");
+      } 
+      else {
+        setMessage(response.message)
+        setStatus("error");
+      }
+    } catch (error) {
+      console.log("Error fetching user information: ", error);        
+      setStatus("error");
     }
-    catch (error) {
-      console.log("Error fetching user information:", error)
-    }
+    setTimeout(() => setStatus(null), 3000); 
   }
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     console.log("handleSaveSettings clicked")
     console.log(
       {
         fullName: fullName,
         phoneNumber: phoneNumber,
-        notifications: notifications,
-        lowStockAlerts: lowStockAlerts,
+        receiveEmail: receiveEmail,
+        recieveLowStockAlert: receiveLowStockAlert,
         localCurrency: localCurrency
       }
     )
+
+    if (!user) {
+      console.error("User data not loaded yet");
+      return;
+    }
+  
+    const updatedFields: Partial<User> = {};
+  
+    if (fullName !== user.fullName) {
+      updatedFields.fullName = fullName;
+    }
+    if (phoneNumber !== user.phoneNumber) {
+      updatedFields.phoneNumber = phoneNumber;
+    }
+    if (receiveEmail !== user.receiveEmail) {
+      updatedFields.receiveEmail = receiveEmail;
+    }
+    if (receiveLowStockAlert !== user.receiveLowStockAlert) {
+      updatedFields.receiveLowStockAlert = receiveLowStockAlert;
+    }
+    if (localCurrency !== user.currency) {
+      updatedFields.currency = localCurrency;
+    }
+    console.log("updatedFields : ", updatedFields)
+  
+    if (Object.keys(updatedFields).length === 0) {
+      return; // There is no changes
+    }
+  
+    try {
+      const res = await patchData("api/User", updatedFields);
+      const response = res.data
+      
+      if (response.status === "Success") {
+        setMessage(response.message)
+        setStatus("success");
+        fetchUserInformation();
+      } 
+      else {
+        setMessage(response.message)
+        setStatus("error");
+      }
+    } catch (error) {
+      setStatus("error");
+    }
+    setTimeout(() => setStatus(null), 3000);    
   }
 
   return (
     <div className="space-y-6">
       {status && (
-        <div className="fixed top-28 left-5">
+        <div className="fixed top-28 right-5">
           <Notification
             withCloseButton={false}
             icon={
@@ -98,19 +161,19 @@ export default function SettingsPage() {
             <p className="text-sm text-muted-foreground">Update user details</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
+            
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium block">
                 Email Address
               </label>
-              <input
+              <div
                 id="email"
-                type="email"
-                placeholder="Enter email"
-                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-                value={user?.email}
-                disabled
-              />
+                className="w-full rounded-md border px-3 py-2 text-m focus:outline-none focus:ring-2 focus:ring-primary bg-white"
+              >
+                {user?.email || "Email field"}
+              </div>
             </div>
+            
             <div className="space-y-2">
               <label
                 htmlFor="companyName"
@@ -122,7 +185,7 @@ export default function SettingsPage() {
                 id="fullName"
                 placeholder="Enter full name"
                 className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-                value={user?.fullName}
+                value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
               />
             </div>
@@ -134,7 +197,7 @@ export default function SettingsPage() {
                 id="phone"
                 placeholder="Enter phone number"
                 className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-                value={user?.phoneNumber}
+                value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
               />
             </div>
@@ -145,9 +208,9 @@ export default function SettingsPage() {
               </label>
               <select
                 id="currency"
-                defaultValue={currency}
-                onChange={(e) => setLocalCurrency(e.target.value)}
                 className="w-full rounded-md border px-3 py-2 text-sm bg-white"
+                value={localCurrency}
+                onChange={(e) => setLocalCurrency(e.target.value)}
               >
                 <option value="$">USD ($)</option>
                 <option value="€">EUR (€)</option>
@@ -179,8 +242,8 @@ export default function SettingsPage() {
                 </div>
                 <input
                   type="checkbox"
-                  checked={user?.receiveEmail}
-                  onChange={(e) => setNotifications(e.target.checked)}
+                  checked={receiveEmail}
+                  onChange={(e) => setReceiveEmail(e.target.checked)}
                   className="h-5 w-5"
                 />
               </div>
@@ -195,8 +258,8 @@ export default function SettingsPage() {
                 </div>
                 <input
                   type="checkbox"
-                  checked={user?.recieveLowStockAlert}
-                  onChange={(e) => setLowStockAlerts(e.target.checked)}
+                  checked={receiveLowStockAlert}
+                  onChange={(e) => setReceiveLowStockAlert(e.target.checked)}
                   className="h-5 w-5"
                 />
               </div>

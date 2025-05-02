@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Trash2 } from "lucide-react";
-import { getData } from "@/utils/api";
+import { deleteData, getData } from "@/utils/api";
 import AddOrganizationModal from "@/components/AddOrganizationModal";
+import { Text } from '@mantine/core';
+import { modals } from '@mantine/modals';
+
 
 interface Organization {
   id: number;
@@ -47,16 +50,26 @@ export default function SuppliersPage() {
   );
 
   const handleDelete = async (id: number) => {
-    console.log("handle delete")
-    const confirmDelete = window.confirm("Are you sure you want to delete this organization?");
-    if (confirmDelete) {
-      try {
-        // await deleteData(`api/organization/${id}`);
-        fetchOrganizations();
-      } catch (error) {
-        console.error("Error deleting organization:", error);
-      }
-    }
+    modals.openConfirmModal({
+      title: 'Delete your profile',
+      centered: true,
+      children: (
+        <Text size="sm">
+           Are you sure you want to delete this organization? This action cannot be undone.
+        </Text>
+      ),
+      labels: { confirm: 'Delete', cancel: "Cancel" },
+      confirmProps: { color: 'red' },
+      // onCancel: () => console.log('Cancel'),
+      onConfirm: async () => {
+        try {
+          await deleteData(`api/organization/${id}`);
+          fetchOrganizations();
+        } catch (error) {
+          console.error("Error deleting organization:", error);
+        }
+      },
+    });
   }
 
   return (
@@ -67,8 +80,7 @@ export default function SuppliersPage() {
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           onClick={() => setModalOpen(true)}
         >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Organization
+          New Organization
         </button>
       </div>
 

@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from "react"
 import { Plus } from "lucide-react"
 import AddSupplyModal from "@/components/AddOrderModal"
 import { deleteData, getData, postData } from "@/utils/api"
-import { Check, X } from 'lucide-react'
+import { Check, X, History } from 'lucide-react'
 import { Notification } from '@mantine/core';
 import { IconX, IconCheck } from '@tabler/icons-react';
 import { useAppContext } from "@/context"
-
+import Link from "next/link"
 
 interface Order {
   id: number,
@@ -43,6 +43,18 @@ export default function OrderPage() {
   const [message, setMessage] = useState<string>("");
   const { currency, setCurrency } = useAppContext()
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const organizationMap = useMemo(() => {
+    const map = new Map<number, string>()
+    organizations.forEach(org => map.set(org.id, org.name))
+    return map
+  }, [organizations])
+  
+  const productMap = useMemo(() => {
+    const map = new Map<number, string>()
+    products.forEach(prod => map.set(prod.id, prod.name))
+    return map
+  }, [products])
 
 
   useEffect(() => {
@@ -82,19 +94,6 @@ export default function OrderPage() {
   }
 
   
-  const organizationMap = useMemo(() => {
-    const map = new Map<number, string>()
-    organizations.forEach(org => map.set(org.id, org.name))
-    return map
-  }, [organizations])
-  
-  const productMap = useMemo(() => {
-    const map = new Map<number, string>()
-    products.forEach(prod => map.set(prod.id, prod.name))
-    return map
-  }, [products])
-
-  
   const filteredOrders = useMemo(() => {
     const lowerSearch = search.toLowerCase();
 
@@ -113,11 +112,7 @@ export default function OrderPage() {
     setIsProcessing(true)
     const approvedOrder = orders.find(order => order.id === orderId);
     try {
-
-      console.log("handleApprove Informations")
-      
       const endpoint = `products/${approvedOrder?.productId}/${approvedOrder?.type}`
-      console.log("endpoint: ", endpoint)
       const res = await postData(endpoint, {
           organizationId : approvedOrder?.organizationId,
           quantity: approvedOrder?.quantity,
@@ -132,7 +127,8 @@ export default function OrderPage() {
       if (response.status === "Success") {
         setMessage(response.message)
         setStatus("success");
-        handleReject(orderId);
+        // fetchOrders();
+        setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
       } else {
         setMessage(response.message)
         setStatus("error");
@@ -166,7 +162,7 @@ export default function OrderPage() {
 
     } catch (error) {
         setStatus("error");
-        console.log("Error: ", error)        
+        console.error("Error: ", error)        
     }
     setTimeout(() => setStatus(null), 3000);    
     setIsProcessing(false)
@@ -192,13 +188,20 @@ export default function OrderPage() {
 
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Orders</h1>
+        <div className="flex items-center gap-4">
+        <Link 
+          href="orders/history"
+          className="flex items-center px-4 py-2"
+          >
+          <History className="mr-1 w-7 h-7"/>
+        </Link>
         <button 
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           onClick={() => setModalOpen(true)}
           >
-          <Plus className="mr-2 h-4 w-4" />
           New Order
         </button>
+            </div>
       </div>
 
       <div className="flex space-x-4">

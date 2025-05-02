@@ -10,11 +10,8 @@ import {
   Users,
   History,
   Settings,
-  BarChart3,
-  BadgeCent,
-  ShoppingBag,
-  Check,
-  X
+  MoveLeft,
+  MoveRight
 } from 'lucide-react'
 
 const sidebarItems = [
@@ -40,7 +37,7 @@ export default function Sidebar() {
       <div className="p-4 flex items-center justify-between">
         {!isCollapsed && <h1 className="text-2xl font-bold">Inventory MS</h1>}
         <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-2 rounded-lg hover:bg-muted">
-          {isCollapsed ? '→' : '←'}
+          {isCollapsed ? <MoveRight/> : <MoveLeft/>}
         </button>
       </div>
 

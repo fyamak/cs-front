@@ -8,6 +8,8 @@ export function AppWrapper({ children } : {
 }) {
     const [currency, setCurrency] = useState("$")
 
+    
+
     return (
         <AppContext.Provider value={{
             currency, setCurrency
