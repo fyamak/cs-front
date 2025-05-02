@@ -19,16 +19,17 @@ interface Response {
 
 const RegisterPage = () => {
     const router = useRouter();
-    const [fullName, setFullName] = useState<string>("");
     const [email, setEmail] = useState<string>("");
     const [password, setPassword] = useState<string>("");
+    const [fullName, setFullName] = useState<string>("");
+    const [phoneNumber, setPhoneNumber] = useState<string>("");
     
     const [status, setStatus] = useState<"success" | "error" | null>(null);
     const [message, setMessage] = useState<string>("");
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault()
-        const formData = { fullName, email, password }
+        const formData = { fullName, email, password, phoneNumber }
         
         try {
             const res = await postData("register", formData)
@@ -61,7 +62,7 @@ const RegisterPage = () => {
         <div className="flex h-screen">
             <div className="flex-1 flex items-center justify-center text-lg font-semibold">
                 {status && (
-                    <div className="fixed top-28 left-5">
+                    <div className="fixed top-28 right-5">
                         <Notification
                             withCloseButton={false}
                             icon={status === "success" ? <IconCheck size={20} /> : <IconX size={20} />}
@@ -75,17 +76,6 @@ const RegisterPage = () => {
                 )}
 
                 <form className="max-w-sm mx-auto" onSubmit={handleSubmit}>
-                    <div className="mb-5">
-                        <label className="block mb-2 text-sm font-medium text-gray-900">Full Name</label>
-                        <input
-                        type="text"
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                        placeholder="Test User"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        required
-                        />
-                    </div>
                     <div className="mb-5">
                         <label className="block mb-2 text-sm font-medium text-gray-900">Email</label>
                         <input
@@ -105,6 +95,28 @@ const RegisterPage = () => {
                         placeholder="********"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        required
+                        />
+                    </div>
+                    <div className="mb-5">
+                        <label className="block mb-2 text-sm font-medium text-gray-900">Full Name</label>
+                        <input
+                        type="text"
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        placeholder="Full Name"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        required
+                        />
+                    </div>
+                    <div className="mb-5">
+                        <label className="block mb-2 text-sm font-medium text-gray-900">Phone Number</label>
+                        <input
+                        type="text"
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        placeholder="5xx-xxx-xxxx"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
                         required
                         />
                     </div>

@@ -2,10 +2,10 @@
 import React, { useState } from 'react'
 import { IconX, IconCheck } from '@tabler/icons-react';
 import { Notification } from '@mantine/core';
-import { postData } from '@/utils/api';
-import { useAppContext } from '@/context';
 import { useRouter } from "next/navigation";
 import Link from 'next/link'
+import Cookies from 'js-cookie';
+import { postData } from '@/utils/api';
 
 
 interface Response {
@@ -19,47 +19,39 @@ interface Response {
 }
 
 
-export default function ProductSupplies() {
+export default function LoginPage() {
     const router = useRouter();
     const [email, setEmail] = useState<string>("");
     const [password, setPassword] = useState<string>("");
-    const { isLoggedIn, setIsLoggedIn } = useAppContext()
     
     const [status, setStatus] = useState<"success" | "error" | null>(null);
     const [message, setMessage] = useState<string>("");
-    
+   
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        
         event.preventDefault()
-        const formData = { email, password }
         
         try {
-            const res = await postData("login", formData)
-            const response: Response = res.data 
-            const responseData = response.data
+            const res = await postData("login", { email: email, password: password});
+            const response : Response = res.data            
 
             if (response.status === "Success")
             {
-                if (responseData)
-                {
-                    localStorage.setItem("accessToken", responseData.accessToken)
-                    localStorage.setItem("expiration", responseData.expiration)
-                    localStorage.setItem("refreshToken", responseData.refreshToken)
-                    setMessage(response.message)
-                    setStatus("success")
-                    setIsLoggedIn(true)
-                    localStorage.setItem("isLoggedIn", "true")
-                    router.push("/products")
-                }
+                setMessage(response.message)
+                setStatus("success")
+                Cookies.set("accessToken",response.data.accessToken)
+                Cookies.set("refreshToken",response.data.refreshToken)
+                router.push("/")
             }
             else{
                 setMessage(response.message)
                 setStatus("error")
             }
         } catch (error) {
-            setMessage("")
-            setStatus("error")
-            console.log(error)
+            setMessage("");
+            setStatus("error");
+            console.log(error);
         }
         
         setTimeout(() => setStatus(null), 3000);
@@ -70,7 +62,7 @@ export default function ProductSupplies() {
             <div className="flex-1 flex items-center justify-center text-lg font-semibold">
                 
                 {status && (
-                    <div className="fixed top-28 left-5">
+                    <div className="fixed top-28 right-5">
                         <Notification 
                             withCloseButton={false}
                             icon={status === "success" ? <IconCheck size={20} /> : <IconX size={20} />}

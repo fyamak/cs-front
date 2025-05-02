@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "./navbar";
 import '@mantine/core/styles.css';
+import Sidebar from "./sidebar"
 import { createTheme, MantineProvider } from '@mantine/core';
+import { ModalsProvider } from '@mantine/modals';
 import { AppWrapper } from "../context";
+
 
 const theme = createTheme({});
 
@@ -31,11 +33,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <AppWrapper>
           <MantineProvider theme={theme}>
-            <Navbar/>
-              {children}
+            <ModalsProvider>
+              <div className="flex h-screen">
+                <Sidebar />
+                <main className="flex-1 overflow-y-auto bg-background p-4">
+                  {children}
+                </main>
+              </div>
+            </ModalsProvider>
           </MantineProvider>
         </AppWrapper>
       </body>
