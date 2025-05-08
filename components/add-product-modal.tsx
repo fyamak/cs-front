@@ -1,26 +1,19 @@
 import React, { useEffect, useState } from 'react'
 import { IconX, IconCheck } from '@tabler/icons-react';
 import { Notification } from '@mantine/core';
-import { getData, postData } from '@/utils/api';
+import { postData } from '@/utils/api';
 import { Select } from '@mantine/core';
+import { IResponse } from '@/types/api-response-types';
+import UseFetchCategories from '@/hooks/use-fetch-categories';
 
-interface Response {
-    data: object,
-    message: string,
-    status: string
-}
-
-interface Category{
-  id: number,
-  name: string
-}
 
 const AddProductModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClose: () => void; onSubmit: () => void;}) => {
   const [sku, setSku] = useState("");
   const [productName, setProductName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>("");
-  const [categories, setCategories] = useState<Category[]>([]);
   const [searchValue, setSearchValue] = useState('');
+
+  const { categories, fetchCategories } = UseFetchCategories();
 
   const [status, setStatus] = useState<"success" | "error" | null>(null);
   const [message, setMessage] = useState<string>("");
@@ -30,19 +23,10 @@ const AddProductModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClo
     label: c.name,
   }));
 
+  
   useEffect(() => {
     fetchCategories();
   }, []);
-
-  const fetchCategories = async () => {
-    try {
-      const res = await getData("api/category");
-      const response = res.data;
-      setCategories(response.data);
-    } catch (error) {
-      console.error("Error fetching categories");
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +36,7 @@ const AddProductModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClo
         name: productName,
         categoryId: Number(selectedCategory),
       });
-      const response: Response = res.data;
+      const response: IResponse = res.data;
 
       if (response.status === "Success") {
         setMessage(response.message);

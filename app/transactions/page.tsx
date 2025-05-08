@@ -4,30 +4,16 @@ import { getData } from "@/utils/api"
 import { useEffect, useState } from "react"
 import { IconX, IconCheck } from '@tabler/icons-react';
 import { Notification } from '@mantine/core';
-
-interface Product {
-  id: number,
-  name: string,
-}
-
-interface Transaction {
-  id: number,
-  product: string,
-  organization: string,
-  type: string,
-  price: number,
-  quantity: number,
-  date: string,
-  remainingQuantity: number
-}
+import { ITransaction } from "@/types/product-types";
+import UseFetchProducts from "@/hooks/use-fetch-products";
 
 export default function TransactionsPage() {
   
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [selectedProduct, setSelectedProduct] = useState<number>();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<ITransaction[]>([]);
+  const { products, fetchProducts } = UseFetchProducts();
 
   const [status, setStatus] = useState<"success" | "error" | null>(null);
   const [message, setMessage] = useState<string>("");
@@ -36,20 +22,11 @@ export default function TransactionsPage() {
     fetchProducts();
   }, [])
 
-  const fetchProducts = async () => {
-      try {
-          const res = await getData("products");
-          const response = res.data
-          setProducts(response.data || []);
-      } catch (error) {
-          console.log('Error fetching products:', error);
-      }
-    }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    var endpoint = `${startDate +"T00:00:00.000Z"}/${endDate+"T00:00:00.000Z"}`
+    var endpoint = `${startDate +"T00:00:00.000Z"}/${endDate+"T23:59:59.999Z"}`
     if (selectedProduct && selectedProduct !== 0) {
       endpoint += `?productId=${selectedProduct}`;
     }

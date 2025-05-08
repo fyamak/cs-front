@@ -1,49 +1,24 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { Plus } from "lucide-react"
-import { getData } from "@/utils/api"
 import Link from "next/link";
-import AddProductModal from "@/components/AddProductModal";
-
-interface Product {
-  id: number,
-  sku: string,
-  name: string,
-  totalQuantity: number,
-  categoryId: number
-}
-
-interface Category{
-  id: number,
-  name: string
-}
-
-interface Response {
-  status: string
-  message: string,
-  data: Product[]
-}
+import AddProductModal from "@/components/add-product-modal";
+import UseFetchProducts from "@/hooks/use-fetch-products";
+import UseFetchCategories from "@/hooks/use-fetch-categories";
 
 
-export default function InventoryPage() {
+export default function ProductPage() {
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState(0)
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [isModalOpen, setModalOpen] = useState(false);
 
-  const categoryMap = useMemo(() => {
-    const map = new Map<number, string>()
-    categories.forEach(cat => map.set(cat.id, cat.name))
-    return map
-  }, [categories])
+  const { products, fetchProducts } = UseFetchProducts();
+  const { categories, categoryMap, fetchCategories } = UseFetchCategories();
 
   useEffect(() => {
     fetchProducts();
     fetchCategories();
   }, [])
-  
   
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
@@ -55,38 +30,13 @@ export default function InventoryPage() {
   }, [products, search, category]);
 
 
-  const fetchProducts = async () => {
-    try {
-        const res = await getData("products");
-        const response : Response = res.data
-        setProducts(response.data || []);
-    } catch (error) {
-        console.error('Error fetching products:', error);
-    }
-  }
-
-  const fetchCategories = async () => {
-    try
-    {
-      const res = await getData("api/category")
-      const response = res.data
-      setCategories(response.data)
-    }
-    catch(error)
-    {
-      console.error('Error fetching categories:', error)
-    }
-  }
-
   const getStockBadge = (quantity: number) => {
     const isInStock = quantity > 0;
-  
     const styles = isInStock
       ? "bg-green-200 text-green-800"
       : "bg-red-200 text-red-800";
   
     const label = isInStock ? "In Stock" : "Insufficient Stock";
-  
     return <span className={`px-2 py-1 text-xs rounded-full ${styles}`}> {label} </span>
   };
   
@@ -146,7 +96,7 @@ export default function InventoryPage() {
                     </Link>
                     </td>
                 <td className="px-4 py-2">{product.sku}</td>
-                <td className="px-4 py-2">{categoryMap.get(product.categoryId)?? "Unknown"}</td>
+                <td className="px-4 py-2">{categoryMap.get(product.categoryId)?? "Unknown Category"}</td>
                 <td className="px-4 py-2">{product.totalQuantity}</td>
                 <td className="px-4 py-2">{getStockBadge(product.totalQuantity)}</td>
               </tr>

@@ -1,61 +1,29 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Plus } from "lucide-react"
-import AddSupplyModal from "@/components/AddOrderModal"
-import { deleteData, getData, postData } from "@/utils/api"
+import AddSupplyModal from "@/components/add-order-modal"
+import { deleteData, postData } from "@/utils/api"
 import { Check, X, History } from 'lucide-react'
 import { Notification } from '@mantine/core';
 import { IconX, IconCheck } from '@tabler/icons-react';
 import { useAppContext } from "@/context"
 import Link from "next/link"
-
-interface Order {
-  id: number,
-  productId: number,
-  organizationId: number,
-  quantity: number,
-  price: number,
-  date: string,
-  type: string
-}
-
-interface Product {
-  id: number,
-  name: string,
-}
-
-interface Organization{
-  id: number,
-  name: string,
-}
+import UseFetchOrders from "@/hooks/use-fetch-orders"
+import UseFetchOrganizations from "@/hooks/use-fetch-organizations"
+import UseFetchProducts from "@/hooks/use-fetch-products"
 
 export default function OrderPage() {
   const [orderType, setOrderType] = useState("all")
   const [search, setSearch] = useState("")
-
   const [isModalOpen, setModalOpen] = useState(false);
-  const [orders, setOrders] = useState<Order[]>([])
-  const [products, setProducts] = useState<Product[]>([]);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-
+  const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState<"success" | "error" | null>(null);
   const [message, setMessage] = useState<string>("");
-  const { currency, setCurrency } = useAppContext()
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const organizationMap = useMemo(() => {
-    const map = new Map<number, string>()
-    organizations.forEach(org => map.set(org.id, org.name))
-    return map
-  }, [organizations])
   
-  const productMap = useMemo(() => {
-    const map = new Map<number, string>()
-    products.forEach(prod => map.set(prod.id, prod.name))
-    return map
-  }, [products])
-
+  const { currency, setCurrency } = useAppContext();
+  const { orders, fetchOrders } = UseFetchOrders();
+  const { organizationMap, fetchOrganizations } = UseFetchOrganizations();
+  const { productMap ,fetchProducts} = UseFetchProducts();
 
   useEffect(() => {
     fetchOrders()
@@ -63,40 +31,9 @@ export default function OrderPage() {
     fetchOrganizations();
   }, [])
 
-  const fetchOrders = async () => {
-    try {
-        const res = await getData("orders");
-        const response = res.data
-        setOrders(response.data || []);
-    } catch (error) {
-        console.log('Error fetching orders:', error);
-    }
-  }
-  
-  const fetchOrganizations = async () => {
-      try {
-          const res = await getData("api/organization");
-          const response = res.data
-          setOrganizations(response.data || []);
-      } catch (error) {
-          console.log('Error fetching products:', error);
-      }
-  }
 
-  const fetchProducts = async () => {
-      try {
-          const res = await getData("products");
-          const response = res.data
-          setProducts(response.data || []);
-      } catch (error) {
-          console.log('Error fetching products:', error);
-      }
-  }
-
-  
   const filteredOrders = useMemo(() => {
     const lowerSearch = search.toLowerCase();
-
     return orders.filter((order) => {
       const productName = productMap.get(order.productId)?.toLowerCase() || "";
       const organizationName = organizationMap.get(order.organizationId)?.toLowerCase() || "";
@@ -105,7 +42,7 @@ export default function OrderPage() {
   
       return matchesSearch && matchesCategory;
     });
-  }, [orders, search, orderType, productMap, organizationMap]);
+  }, [search, orderType, orders, productMap, organizationMap]);
 
 
   const handleApprove = async (orderId: number) => {
@@ -121,14 +58,11 @@ export default function OrderPage() {
           orderId: orderId
       });
       const response = res.data
-      console.log("res: ", res)
-      console.log("response: ", response)
 
       if (response.status === "Success") {
         setMessage(response.message)
         setStatus("success");
-        // fetchOrders();
-        setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
+        fetchOrders();
       } else {
         setMessage(response.message)
         setStatus("error");
@@ -144,7 +78,6 @@ export default function OrderPage() {
   
   const handleReject = async (orderId: number) => {
     setIsProcessing(true)
-    console.log("Rejected Order ID:", orderId)
     
     try {
       const endpoint = `orders/${orderId}`

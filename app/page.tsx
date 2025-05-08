@@ -6,9 +6,7 @@ import { useEffect, useState } from "react"
 import { 
   Package, 
   TrendingDown, 
-  TrendingUp, 
   Users, 
-  AlertCircle,
   ShoppingBasket,
   ClockFading,
   BanknoteArrowUp,

@@ -2,13 +2,8 @@ import React, { useState } from 'react'
 import { IconX, IconCheck } from '@tabler/icons-react';
 import { Notification } from '@mantine/core';
 import { postData } from '@/utils/api';
+import { IResponse } from '@/types/api-response-types';
 
-
-interface Response {
-    data: object,
-    message: string,
-    status: string
-}
 
 const AddOrganizationModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClose: () => void; onSubmit: () => void;}) => {
     const [name, setName] = useState('');
@@ -29,7 +24,7 @@ const AddOrganizationModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; 
                 phone: phone,
                 address : address
             });
-            const response : Response = res.data
+            const response : IResponse = res.data
 
             if (response.status === "Success") {
                 setMessage(response.message)
