@@ -6,35 +6,36 @@ import { useRouter } from "next/navigation";
 import Link from 'next/link'
 import Cookies from 'js-cookie';
 import { postData } from '@/utils/api';
-
-
-interface Response {
-    data: {
-        accessToken: string,
-        expiration: string,
-        refreshToken: string
-    }
-    message: string,
-    status: string
-}
+import { IAuthResponse } from '@/types/api-response-types';
+import { ILoginForm } from '@/types/state-object-types';
 
 
 export default function LoginPage() {
     const router = useRouter();
-    const [email, setEmail] = useState<string>("");
-    const [password, setPassword] = useState<string>("");
-    
+    const [loginForm, setLoginForm] = useState<ILoginForm>({
+        email: "",
+        password: ""
+    })
+
     const [status, setStatus] = useState<"success" | "error" | null>(null);
     const [message, setMessage] = useState<string>("");
    
 
+    const handleChange = (e : any) => {
+      const { name, value } = e.target;
+
+      setLoginForm((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    };
+      
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-        
         event.preventDefault()
-        
+
         try {
-            const res = await postData("login", { email: email, password: password});
-            const response : Response = res.data            
+            const res = await postData("login", { email: loginForm.email, password: loginForm.password});
+            const response : IAuthResponse = res.data            
 
             if (response.status === "Success")
             {
@@ -76,25 +77,27 @@ export default function LoginPage() {
 
                 <form className="max-w-sm mx-auto" onSubmit={handleSubmit}>
                     <div className="mb-5">
-                        <label className="block mb-2 text-sm font-medium text-gray-900 ">Email</label>
+                        <label htmlFor="email" className="block mb-2 font-medium text-gray-900 ">Email</label>
                         <input 
                             type="email" 
                             id="email" 
+                            name='email'
                             className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" 
-                            placeholder="user@example.com" 
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="johndue@example.com" 
+                            value={loginForm.email}
+                            onChange={handleChange}
                             required />
                     </div>
                     <div className="mb-5">
-                        <label className="block mb-2 text-sm font-medium text-gray-900">Password</label>
+                        <label htmlFor="password" className="block mb-2 font-medium text-gray-900">Password</label>
                         <input 
                             type="password" 
                             id="password" 
+                            name="password"
                             className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" 
                             placeholder="********" 
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            value={loginForm.password}
+                            onChange={handleChange}
                             required />
                     </div>
                     <div className='flex justify-center'>

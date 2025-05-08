@@ -1,91 +1,23 @@
 "use client";
-import { getData } from "@/utils/api";
-import React, { useEffect, useMemo, useState } from "react";
-import { Table } from '@mantine/core';
+import UseFetchOrders from "@/hooks/use-fetch-orders";
+import UseFetchOrganizations from "@/hooks/use-fetch-organizations";
+import UseFetchProducts from "@/hooks/use-fetch-products";
+import React, { useEffect, useState } from "react";
 
-interface Order {
-  id: number;
-  productId: number;
-  organizationId: number;
-  quantity: number;
-  price: number;
-  date: string;
-  type: string;
-  isSuccessfull: boolean;
-  detail: string;
-  createdAt: string;
-}
-
-interface Product {
-  id: number,
-  name: string,
-}
-
-interface Organization{
-  id: number,
-  name: string,
-}
-
-
-
-const OrderHistory: React.FC = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
+const OrderHistory = () => {
   const [loading, setLoading] = useState(true);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-
-
-  const organizationMap = useMemo(() => {
-    const map = new Map<number, string>()
-    organizations.forEach(org => map.set(org.id, org.name))
-    return map
-  }, [organizations])
-  
-  const productMap = useMemo(() => {
-    const map = new Map<number, string>()
-    products.forEach(prod => map.set(prod.id, prod.name))
-    return map
-  }, [products])
+  const { orderHistory, fetchOrderHistory } = UseFetchOrders();
+  const { productMap, fetchProducts } = UseFetchProducts();
+  const { organizationMap, fetchOrganizations } = UseFetchOrganizations();
 
   
   useEffect(() => {
+    setLoading(true);
     fetchOrderHistory();
-    fetchOrganizations();
     fetchProducts();
+    fetchOrganizations();
+    setLoading(false);
   }, []);
-
-  const fetchOrderHistory = async () => {
-    try {
-      const res = await getData("orders?isDeleted=true");
-      const response = res.data;
-      setOrders(response.data);
-    } catch (error) {
-      console.error("Failed to fetch order history:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchOrganizations = async () => {
-    try {
-        const res = await getData("api/organization");
-        const response = res.data
-        setOrganizations(response.data || []);
-    } catch (error) {
-        console.log('Error fetching products:', error);
-    }
-}
-
-const fetchProducts = async () => {
-    try {
-        const res = await getData("products");
-        const response = res.data
-        setProducts(response.data || []);
-    } catch (error) {
-        console.log('Error fetching products:', error);
-    }
-}
-
 
   return (
     <div className="p-4 max-w-8xl mx-auto">
@@ -93,7 +25,7 @@ const fetchProducts = async () => {
 
       {loading ? (
         <p>Loading...</p>
-      ) : orders.length === 0 ? (
+      ) : orderHistory.length === 0 ? (
         <p>No past orders found.</p>
       ) : (
         <div className="overflow-x-auto rounded-lg shadow">
@@ -111,7 +43,7 @@ const fetchProducts = async () => {
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => (
+              {orderHistory.map((order) => (
                 <tr key={order.id} className="border-t border-gray-200">
                   <td className="px-4 py-2">{productMap.get(order.productId) ?? "Unknown"}</td>
                   <td className="px-4 py-2">{organizationMap.get(order.organizationId) ?? "Unknown"}</td>

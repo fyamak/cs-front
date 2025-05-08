@@ -1,45 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search, Trash2 } from "lucide-react";
-import { deleteData, getData } from "@/utils/api";
-import AddOrganizationModal from "@/components/AddOrganizationModal";
+import { Search, Trash2 } from "lucide-react";
+import { deleteData } from "@/utils/api";
+import AddOrganizationModal from "@/components/add-organization-modal";
 import { Text } from '@mantine/core';
 import { modals } from '@mantine/modals';
+import UseFetchOrganizations from "@/hooks/use-fetch-organizations";
 
 
-interface Organization {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-}
-
-interface Response {
-  status: string;
-  message: string;
-  data: Organization[];
-}
-
-export default function SuppliersPage() {
+export default function OrganizationPage() {
   const [search, setSearch] = useState("");
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isModalOpen, setModalOpen] = useState(false);
+  const { organizations, fetchOrganizations} = UseFetchOrganizations()
 
   useEffect(() => {
     fetchOrganizations();
   }, []);
 
-  const fetchOrganizations = async () => {
-    try {
-      const res = await getData("api/organization");
-      const response: Response = res.data;
-      setOrganizations(response.data || []);
-    } catch (error) {
-      console.log("Error fetching products:", error);
-    }
-  };
 
   const filteredOrganizations = useMemo(
     () =>

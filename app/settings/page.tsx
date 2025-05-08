@@ -5,33 +5,21 @@ import { useEffect, useState } from "react"
 import { Notification } from '@mantine/core';
 import { IconX, IconCheck } from '@tabler/icons-react';
 import { patchData, postData } from "@/utils/api";
-
-interface User {
-  id: number,
-  fullName: string,
-  email: string,
-  phoneNumber: string,
-  currency: string,
-  receiveEmail: boolean,
-  receiveLowStockAlert: boolean,
-  userType: string
-}
-
-interface Response {
-  status: string,
-  message: string,
-  data: User
-}
+import { IUser } from "@/types/user-types";
+import { IResponse } from "@/types/api-response-types";
+import { IUserForm } from "@/types/state-object-types";
 
 
 export default function SettingsPage() {
-  const [fullName, setFullName] = useState<string>("")
-  const [phoneNumber, setPhoneNumber] = useState<string>("")
-  const [receiveEmail, setReceiveEmail] = useState<boolean>(false)
-  const [receiveLowStockAlert, setReceiveLowStockAlert] = useState<boolean>(false)
-  const [localCurrency, setLocalCurrency] = useState<string>("")
+  const [userForm, setUserForm] = useState<IUserForm>({
+    fullName: "",
+    phoneNumber: "",
+    receiveEmail: false,
+    receiveLowStockAlert: false,
+    localCurrency: ""
+  })
 
-  const [user, setUser] = useState<User>()
+  const [user, setUser] = useState<IUser>()
   const { currency, setCurrency } = useAppContext()
 
   const [status, setStatus] = useState<"success" | "error" | null>(null);
@@ -41,23 +29,34 @@ export default function SettingsPage() {
     fetchUserInformation();
   }, [])
 
+  const handleChange = (e: any) => {
+    const { name, value, type, checked } = e.target;
+
+    setUserForm(prev => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : 
+              value,
+    }));
+  };
+  
+
   const fetchUserInformation = async () => {
     try {
       const res = await postData("GetProfileInfo", {})
-      const response: Response = res.data
-      const userData = response.data
-
-      console.log(userData)
+      const response: IResponse = res.data
+      const userData: IUser= response.data
 
       if (response.status === "Success") {
         setUser(userData)
         setCurrency(userData.currency)
         
-        setFullName(userData.fullName || "");
-        setPhoneNumber(userData.phoneNumber || "");
-        setReceiveEmail(userData.receiveEmail);
-        setReceiveLowStockAlert(userData.receiveLowStockAlert);
-        setLocalCurrency(userData.currency || "");
+        setUserForm({
+          fullName: userData.fullName,
+          phoneNumber: userData.phoneNumber,
+          receiveEmail: userData.receiveEmail,
+          receiveLowStockAlert: userData.receiveLowStockAlert,
+          localCurrency: userData.currency
+        });
       } 
       else {
         setMessage(response.message)
@@ -71,38 +70,27 @@ export default function SettingsPage() {
   }
 
   const handleSaveSettings = async () => {
-    console.log("handleSaveSettings clicked")
-    console.log(
-      {
-        fullName: fullName,
-        phoneNumber: phoneNumber,
-        receiveEmail: receiveEmail,
-        recieveLowStockAlert: receiveLowStockAlert,
-        localCurrency: localCurrency
-      }
-    )
-
     if (!user) {
       console.error("User data not loaded yet");
       return;
     }
   
-    const updatedFields: Partial<User> = {};
+    const updatedFields: Partial<IUser> = {};
   
-    if (fullName !== user.fullName) {
-      updatedFields.fullName = fullName;
+    if (userForm.fullName !== user.fullName) {
+      updatedFields.fullName = userForm.fullName;
     }
-    if (phoneNumber !== user.phoneNumber) {
-      updatedFields.phoneNumber = phoneNumber;
+    if (userForm.phoneNumber !== user.phoneNumber) {
+      updatedFields.phoneNumber = userForm.phoneNumber;
     }
-    if (receiveEmail !== user.receiveEmail) {
-      updatedFields.receiveEmail = receiveEmail;
+    if (userForm.receiveEmail !== user.receiveEmail) {
+      updatedFields.receiveEmail = userForm.receiveEmail;
     }
-    if (receiveLowStockAlert !== user.receiveLowStockAlert) {
-      updatedFields.receiveLowStockAlert = receiveLowStockAlert;
+    if (userForm.receiveLowStockAlert !== user.receiveLowStockAlert) {
+      updatedFields.receiveLowStockAlert = userForm.receiveLowStockAlert;
     }
-    if (localCurrency !== user.currency) {
-      updatedFields.currency = localCurrency;
+    if (userForm.localCurrency !== user.currency) {
+      updatedFields.currency = userForm.localCurrency;
     }
     console.log("updatedFields : ", updatedFields)
   
@@ -161,7 +149,6 @@ export default function SettingsPage() {
             <p className="text-sm text-muted-foreground">Update user details</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium block">
                 Email Address
@@ -173,7 +160,7 @@ export default function SettingsPage() {
                 {user?.email || "Email field"}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <label
                 htmlFor="companyName"
@@ -183,10 +170,11 @@ export default function SettingsPage() {
               </label>
               <input
                 id="fullName"
+                name="fullName"
                 placeholder="Enter full name"
                 className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                value={userForm.fullName}
+                onChange={handleChange}
               />
             </div>
             <div className="space-y-2">
@@ -195,10 +183,11 @@ export default function SettingsPage() {
               </label>
               <input
                 id="phone"
+                name="phoneNumber"
                 placeholder="Enter phone number"
                 className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                value={userForm.phoneNumber}
+                onChange={handleChange}
               />
             </div>
             {/* there is a problem here SOLVE IT*/}
@@ -208,9 +197,10 @@ export default function SettingsPage() {
               </label>
               <select
                 id="currency"
+                name="currency"
                 className="w-full rounded-md border px-3 py-2 text-sm bg-white"
-                value={localCurrency}
-                onChange={(e) => setLocalCurrency(e.target.value)}
+                value={userForm.localCurrency}
+                onChange={handleChange}
               >
                 <option value="$">USD ($)</option>
                 <option value="€">EUR (€)</option>
@@ -242,8 +232,9 @@ export default function SettingsPage() {
                 </div>
                 <input
                   type="checkbox"
-                  checked={receiveEmail}
-                  onChange={(e) => setReceiveEmail(e.target.checked)}
+                  name="receiveEmail"
+                  checked={userForm.receiveEmail}
+                  onChange={handleChange}
                   className="h-5 w-5"
                 />
               </div>
@@ -258,8 +249,9 @@ export default function SettingsPage() {
                 </div>
                 <input
                   type="checkbox"
-                  checked={receiveLowStockAlert}
-                  onChange={(e) => setReceiveLowStockAlert(e.target.checked)}
+                  name="receiveLowStockAlert"
+                  checked={userForm.receiveLowStockAlert}
+                  onChange={handleChange}
                   className="h-5 w-5"
                 />
               </div>
