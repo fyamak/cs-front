@@ -2,28 +2,30 @@ import React, { use, useEffect, useState } from 'react'
 import { IconX, IconCheck } from '@tabler/icons-react';
 import { Notification } from '@mantine/core';
 import { getData, postData } from '@/utils/api';
+import UseFetchProducts from '@/hooks/use-fetch-products';
+import UseFetchOrganizations from '@/hooks/use-fetch-organizations';
 
 
-interface Product {
-    id: number,
-    name: string,
-}
+// interface Product {
+//     id: number,
+//     name: string,
+// }
 
-interface Organization{
-    id: number,
-    name: string,
-}
+// interface Organization{
+//     id: number,
+//     name: string,
+// }
 
 const AddOrderModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClose: () => void; onSubmit: () => void;}) => {
-    const [products, setProducts] = useState<Product[]>([]);
-    const [organizations, setOrganizations] = useState<Organization[]>([]);
-
     const [selectedProduct, setSelectedProduct] = useState<number>();
     const [selectedOrganization, setSelectedOrganization] = useState<number>();
     const [quantity, setQuantity] = useState<number>(0);
     const [price, setPrice] = useState("");
     const [date, setDate] = useState<string>("");
     const [orderType, setOrderType] = useState<string | null>(null);
+
+    const { products, fetchProducts } = UseFetchProducts();
+    const { organizations, fetchOrganizations } = UseFetchOrganizations();
 
     const [status, setStatus] = useState<"success" | "error" | null>(null);
     const [message, setMessage] = useState<string>("");
@@ -33,27 +35,6 @@ const AddOrderModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClose
         fetchProducts();
         fetchOrganizations();
     }, [])
-    
-    const fetchOrganizations = async () => {
-        try {
-            const res = await getData("api/organization");
-            const response = res.data
-            setOrganizations(response.data || []);
-        } catch (error) {
-            console.log('Error fetching products:', error);
-        }
-    }
-
-    const fetchProducts = async () => {
-        try {
-            const res = await getData("products");
-            const response = res.data
-            setProducts(response.data || []);
-        } catch (error) {
-            console.log('Error fetching products:', error);
-        }
-    }
-
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

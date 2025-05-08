@@ -1,25 +1,24 @@
-import axiosInstance from './axiosInterceptorInstance';
+import axiosInstance from './axios-interceptor-instance';
 
 export async function getData(endpoint:string) {
-  const response = await axiosInstance.get(`${endpoint}`);
+  const response = await axiosInstance.get(`${endpoint}`)
+  // .then(function (response) {
+  //   console.log(response.data);
+  //   console.log(response.status);
+  //   console.log(response.statusText);
+  //   console.log(response.headers);
+  //   console.log(response.config);
+  // });
   return response
 }
 
 export async function postData(endpoint:string, data: object) {
-  const response = await axiosInstance.post(`${endpoint}`, data, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
+  const response = await axiosInstance.post(`${endpoint}`, data)
   return response
 }
 
 export async function patchData(endpoint:string, data: object) {
-  const response = await axiosInstance.patch(`${endpoint}`, data, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+  const response = await axiosInstance.patch(`${endpoint}`, data);
   return response
 }
 
