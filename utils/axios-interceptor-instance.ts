@@ -1,93 +1,89 @@
 import axios from "axios";
-import Cookies from 'js-cookie';
+import Cookies from "js-cookie";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 var isRefreshing = false;
-var failedRequestsQueue: Array<{
-  resolveRequest: (token: string) => void;
-  rejectRequest: (error: unknown) => void;
-}> = [];
+var failedQueue: any[] = [];
+
+const processQueue = (error: any, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+
+  failedQueue = [];
+};
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { "Content-Type": "application/json" },
 });
 
 // Request interceptor
 axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = Cookies.get('accessToken');
+  function (config) {
+    const token = Cookies.get("accessToken");
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers["Authorization"] = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
+  function (error) {
     return Promise.reject(error);
   }
 );
 
 // Response interceptor
+// https://gist.github.com/Godofbrowser/bf118322301af3fc334437c683887c5f
 axiosInstance.interceptors.response.use(
-  (response) => response,
-  async (error) => {
+  function (response) {
+    return response;
+  },
+  async function (error) {
     const originalRequest = error.config;
-    
-    if (error.response && error.response.status === 401 && !originalRequest._retry) {
-      
+
+    if (error.response.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedRequestsQueue.push({ 
-            resolveRequest: (token: string) => {
-              originalRequest.headers['Authorization'] = `Bearer ${token}`;
-              resolve(axiosInstance(originalRequest));
-            },
-            rejectRequest: reject
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers["Authorization"] = "Bearer " + token;
+            return axios(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
           });
-        });
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
-      try {
-        const refreshToken = Cookies.get('refreshToken');
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
+      const refreshToken = Cookies.get("refreshToken");
 
-        const res = await axios.post(
-          `${API_BASE_URL}RefreshToken`, 
-          { refreshToken }
-        );
-
-        const { accessToken, refreshToken: newRefreshToken } = res.data.data;
-
-        Cookies.set('accessToken', accessToken);
-        Cookies.set('refreshToken', newRefreshToken);
-
-        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-
-        failedRequestsQueue.forEach(({ resolveRequest }) => resolveRequest(accessToken));
-        failedRequestsQueue = [];
-
-        originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
-        return axiosInstance(originalRequest);
-      } catch (refreshError) {
-        failedRequestsQueue.forEach(({ rejectRequest }) => rejectRequest(refreshError));
-        failedRequestsQueue = [];
-
-        if (typeof window !== 'undefined') {
-          Cookies.remove('accessToken');
-          Cookies.remove('refreshToken');
-          window.location.href = '/login';
-        }
-
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
-      }
+      return new Promise(async function (resolve, reject) {
+        await axios
+          .post(`${API_BASE_URL}RefreshToken`, { refreshToken: refreshToken })
+          .then(({ data }) => {
+            Cookies.set("accessToken", data.data.accessToken);
+            Cookies.set("refreshToken", data.data.refreshToken);
+            axios.defaults.headers.common["Authorization"] = "Bearer " + data.data.accessToken;
+            originalRequest.headers["Authorization"] = "Bearer " + data.data.accessToken;
+            processQueue(null, data.data.accessToken);
+            resolve(axios(originalRequest));
+          })
+          .catch((err) => {
+            processQueue(err, null);
+            reject(err);
+          })
+          .finally(() => {
+            isRefreshing = false;
+          });
+      });
     }
 
     return Promise.reject(error);
