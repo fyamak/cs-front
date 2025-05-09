@@ -19,11 +19,8 @@ const UseFetchOrganizations = () => {
     }
   };  
 
-  const organizationMap = useMemo(() => {
-    const map = new Map<number, string>()
-    organizations.forEach(org => map.set(org.id, org.name))
-    return map
-  }, [organizations])
+  const organizationMap = new Map<number, string>()
+  organizations.forEach((org) => organizationMap.set(org.id, org.name))
 
   return { organizations, organizationMap, fetchOrganizations };
 };
