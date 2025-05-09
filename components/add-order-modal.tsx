@@ -6,16 +6,6 @@ import UseFetchProducts from '@/hooks/use-fetch-products';
 import UseFetchOrganizations from '@/hooks/use-fetch-organizations';
 
 
-// interface Product {
-//     id: number,
-//     name: string,
-// }
-
-// interface Organization{
-//     id: number,
-//     name: string,
-// }
-
 const AddOrderModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClose: () => void; onSubmit: () => void;}) => {
     const [selectedProduct, setSelectedProduct] = useState<number>();
     const [selectedOrganization, setSelectedOrganization] = useState<number>();

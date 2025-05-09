@@ -18,11 +18,9 @@ const UseFetchCategories = () => {
         }
     }
 
-    const categoryMap = useMemo(() => {
-        const map = new Map<number, string>()
-        categories.forEach(cat => map.set(cat.id, cat.name))
-        return map
-    }, [categories])
+    const categoryMap = new Map<number, string>()
+    categories.forEach((cat) => categoryMap.set(cat.id, cat.name))
+
 
     return { categories, categoryMap, fetchCategories };
 } 

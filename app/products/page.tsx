@@ -20,14 +20,12 @@ export default function ProductPage() {
     fetchCategories();
   }, [])
   
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const lowerSearch = search.toLowerCase();
-      const matchesSearch = product.name.toLowerCase().includes(lowerSearch) || product.sku.toLowerCase().includes(lowerSearch);
-      const matchesCategory = category === 0 || product.categoryId === category;
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, search, category]);
+  const filteredProducts = products.filter((product) => {
+    const lowerSearch = search.toLowerCase();
+    const matchesSearch = product.name.toLowerCase().includes(lowerSearch) || product.sku.toLowerCase().includes(lowerSearch);
+    const matchesCategory = category === 0 || product.categoryId === category;
+    return matchesSearch && matchesCategory;
+  });
 
 
   const getStockBadge = (quantity: number) => {

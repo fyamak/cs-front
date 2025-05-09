@@ -32,17 +32,15 @@ export default function OrderPage() {
   }, [])
 
 
-  const filteredOrders = useMemo(() => {
+  const filteredOrders =  orders.filter((order) => {
     const lowerSearch = search.toLowerCase();
-    return orders.filter((order) => {
-      const productName = productMap.get(order.productId)?.toLowerCase() || "";
-      const organizationName = organizationMap.get(order.organizationId)?.toLowerCase() || "";
-      const matchesSearch = productName.includes(lowerSearch) || organizationName.includes(lowerSearch);
-      const matchesCategory = orderType === "all" || order.type.toLowerCase() === orderType.toLowerCase();
-  
-      return matchesSearch && matchesCategory;
-    });
-  }, [search, orderType, orders, productMap, organizationMap]);
+    const productName = productMap.get(order.productId)?.toLowerCase() || "";
+    const organizationName = organizationMap.get(order.organizationId)?.toLowerCase() || "";
+    const matchesSearch = productName.includes(lowerSearch) || organizationName.includes(lowerSearch);
+    const matchesCategory = orderType === "all" || order.type.toLowerCase() === orderType.toLowerCase();
+
+    return matchesSearch && matchesCategory;
+  });
 
 
   const handleApprove = async (orderId: number) => {

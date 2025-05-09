@@ -18,14 +18,8 @@ export default function OrganizationPage() {
     fetchOrganizations();
   }, []);
 
+  const filteredOrganizations =  organizations.filter((org) => org.name.toLowerCase().includes(search.toLowerCase()))
 
-  const filteredOrganizations = useMemo(
-    () =>
-      organizations.filter((org) =>
-        org.name.toLowerCase().includes(search.toLowerCase())
-      ),
-    [organizations, search]
-  );
 
   const handleDelete = async (id: number) => {
     modals.openConfirmModal({

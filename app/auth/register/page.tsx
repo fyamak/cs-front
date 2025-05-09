@@ -11,11 +11,6 @@ import { IRegisterForm } from '@/types/state-object-types';
 
 const RegisterPage = () => {
     const router = useRouter();
-    // const [email, setEmail] = useState<string>("");
-    // const [password, setPassword] = useState<string>("");
-    // const [fullName, setFullName] = useState<string>("");
-    // const [phoneNumber, setPhoneNumber] = useState<string>("");
-
     const [registerForm, setRegisterForm] = useState<IRegisterForm>({
         email: "",
         password: "",

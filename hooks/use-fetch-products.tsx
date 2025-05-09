@@ -19,11 +19,9 @@ const UseFetchProducts = () => {
     }
   };  
 
-  const productMap = useMemo(() => {
-    const map = new Map<number, string>();
-    products.forEach((prod) => map.set(prod.id, prod.name));
-    return map;
-  }, [products]);
+  const productMap = new Map<number, string>();
+  products.forEach((prod) => productMap.set(prod.id, prod.name));
+
   
 
   return { products , productMap, fetchProducts};
