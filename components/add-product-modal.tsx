@@ -1,166 +1,124 @@
-import React, { useEffect, useState } from 'react'
-import { IconX, IconCheck } from '@tabler/icons-react';
-import { Notification } from '@mantine/core';
-import { postData } from '@/utils/api';
-import { Select } from '@mantine/core';
-import { IResponse } from '@/types/api-response-types';
-import UseFetchCategories from '@/hooks/use-fetch-categories';
+import UseFetchCategories from "@/hooks/use-fetch-categories";
+import { IAddProductForm } from "@/types/product-types";
+import { postData } from "@/utils/api";
+import { Modal, TextInput, Button, InputBase, Select } from "@mantine/core";
+import { useForm } from "@mantine/form";
+import { useEffect, useState } from "react";
 
+type Props = {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (formData: IAddProductForm) => void;
+};
 
-const AddProductModal = ({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClose: () => void; onSubmit: () => void;}) => {
+export default function AddProductModal({ isOpen, onClose, onSubmit }: Props) {
+  const [searchValue, setSearchValue] = useState("");
+
   const [sku, setSku] = useState("");
   const [productName, setProductName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>("");
-  const [searchValue, setSearchValue] = useState('');
+  const [isCategoryUpdated, setIsCategoryUpdated] = useState<boolean>(false);
 
   const { categories, fetchCategories } = UseFetchCategories();
-
-  const [status, setStatus] = useState<"success" | "error" | null>(null);
-  const [message, setMessage] = useState<string>("");
 
   const categoryOptions = categories.map((c) => ({
     value: c.id.toString(), // convert ID to string for Select
     label: c.name,
   }));
 
-  
   useEffect(() => {
     fetchCategories();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await postData(`products`, {
-        sku: sku,
-        name: productName,
-        categoryId: Number(selectedCategory),
-      });
-      const response: IResponse = res.data;
+  const form = useForm({
+    mode: "uncontrolled",
+    initialValues: {
+      sku: "",
+      productName: "",
+      categoryId: "",
+    },
+  });
 
-      if (response.status === "Success") {
-        setMessage(response.message);
-        setStatus("success");
-        onSubmit();
-      } else {
-        setMessage(response.message);
-        setStatus("error");
-      }
-    } catch (error) {
-      setStatus("error");
-      console.log("Error: ", error);
-    }
-    setTimeout(() => setStatus(null), 3000);
+  const handleSubmit = () => {
+    onSubmit({
+      sku: sku,
+      productName: productName,
+      categoryId: selectedCategory,
+      isCategoryUpdated: isCategoryUpdated
+    });
+    onClose();
+    setSku("");
+    setProductName("");
+    setSelectedCategory("");
+    setIsCategoryUpdated(false);
   };
 
   const handleCreateCategory = async (name: string) => {
-    console.log("selectedCategory: ", selectedCategory)
-    console.log("name: ", name)
-
     try {
-      const res = await postData('api/category', { name });
+      const res = await postData("api/category", { name });
       const response = res.data;
-      const newCategory = response.data
+      const newCategory = response.data;
       setSelectedCategory(newCategory.id);
-      fetchCategories()
+      fetchCategories();
+      setIsCategoryUpdated(true);
     } catch (error) {
       console.error("Failed to create category:", error);
     }
-  }
+  };
 
-  if (!isOpen) return null;
-  
   return (
-    <div className="fixed inset-0 bg-white/80 flex justify-center items-center z-50">
-      {status && (
-        <div className="fixed top-28 right-5">
-          <Notification
-            withCloseButton={false}
-            icon={
-              status === "success" ? (
-                <IconCheck size={20} />
-              ) : (
-                <IconX size={20} />
-              )
-            }
-            color={status === "success" ? "teal" : "red"}
-            withBorder
-            title={status === "success" ? "Success" : "Error"}
+    <Modal
+      opened={isOpen}
+      onClose={onClose}
+      title={<div className="font-bold text-xl">Add Product</div>}
+      size={"lg"}
+    >
+      <TextInput
+        value={sku}
+        onChange={(event) => setSku(event.currentTarget.value)}
+        label="SKU"
+        placeholder="SKU"
+        role="presentation"
+        autoComplete="off"
+        required
+      />
+      <TextInput
+        value={productName}
+        onChange={(event) => setProductName(event.currentTarget.value)}
+        label="Product Name"
+        placeholder="Product name"
+        mt="md"
+        role="presentation"
+        autoComplete="off"
+        required
+      />
+      <Select
+        value={selectedCategory}
+        onChange={setSelectedCategory}
+        onSearchChange={setSearchValue}
+        data={categoryOptions}
+        label="Category"
+        placeholder="Pick value"
+        limit={20}
+        mt="md"
+        nothingFoundMessage={
+          <div
+            className="text-blue-600 cursor-pointer"
+            onClick={() => handleCreateCategory(searchValue)}
           >
-            {message}
-          </Notification>
-        </div>
-      )}
-
-      <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-        <h3 className="text-xl font-bold mb-4">Add New Product</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-900">
-              SKU
-            </label>
-            <input
-              type="text"
-              value={sku}
-              onChange={(e) => setSku(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg"
-              required
-            />
+            Create "{searchValue}"
           </div>
+        }
+        searchable
+        clearable
+        required
+      />
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-900">
-              Name
-            </label>
-            <input
-              type="text"
-              value={productName}
-              onChange={(e) => setProductName(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg"
-              required
-            />
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-900">
-              Category
-            </label>
-            <Select
-              placeholder="Pick value"
-              data={categoryOptions}
-              value={selectedCategory}
-              onChange={setSelectedCategory}
-              onSearchChange={setSearchValue}
-              nothingFoundMessage={
-                <div className="text-blue-600 cursor-pointer" onClick={() => handleCreateCategory(searchValue)}>
-                  Create "{searchValue}" 
-                </div>
-              }
-              searchable
-              clearable
-              required
-            />
-          </div>
-
-          <div className="flex justify-between">
-            <button
-              type="submit"
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg transition transform active:scale-95 duration-100"
-            >
-              Submit
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="bg-gray-500 text-white px-4 py-2 rounded-lg transition transform active:scale-95 duration-100"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+      <div className="text-center">
+        <Button onClick={handleSubmit} type="submit" mt="md">
+          Submit
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
-};
-
-export default AddProductModal;
+}
