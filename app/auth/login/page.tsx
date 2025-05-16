@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { IconX, IconCheck } from '@tabler/icons-react';
 import { Notification } from '@mantine/core';
 import { useRouter } from "next/navigation";
@@ -42,7 +42,7 @@ export default function LoginPage() {
                 setMessage(response.message)
                 setStatus("success")
                 Cookies.set("accessToken",response.data.accessToken)
-                Cookies.set("refreshToken",response.data.refreshToken)
+                Cookies.set("refreshToken",response.data.refreshToken, { expires: 15 })
                 router.push("/")
             }
             else{
