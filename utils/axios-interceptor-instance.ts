@@ -70,7 +70,7 @@ axiosInstance.interceptors.response.use(
           .post(`${API_BASE_URL}RefreshToken`, { refreshToken: refreshToken })
           .then(({ data }) => {
             Cookies.set("accessToken", data.data.accessToken);
-            Cookies.set("refreshToken", data.data.refreshToken);
+            Cookies.set("refreshToken", data.data.refreshToken, { expires: 15 });
             axios.defaults.headers.common["Authorization"] = "Bearer " + data.data.accessToken;
             originalRequest.headers["Authorization"] = "Bearer " + data.data.accessToken;
             processQueue(null, data.data.accessToken);

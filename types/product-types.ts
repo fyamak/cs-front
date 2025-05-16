@@ -6,32 +6,19 @@ export interface IProduct {
     categoryId: number
 }
 
-export interface ICategory{
-    id: number,
-    name: string
+export interface IProductCard {
+    sku: string,
+    name: string,
+    totalQuantity: number,
+    categoryName: string
 }
 
-export interface IOrder {
-    id: number,
-    productId: number,
-    organizationId: number,
-    quantity: number,
-    price: number,
-    date: string,
-    type: string
-}
 
-export interface IOrderHistory {
-    id: number;
-    productId: number;
-    organizationId: number;
-    quantity: number;
-    price: number;
-    date: string;
-    type: string;
-    isSuccessfull: boolean;
-    detail: string;
-    createdAt: string;
+export interface IAddProductForm {
+    sku: string;
+    productName: string;
+    categoryId: string | null;
+    isCategoryUpdated: boolean;
 }
 
 export interface ITransaction {
