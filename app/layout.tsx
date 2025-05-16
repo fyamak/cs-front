@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import '@mantine/core/styles.css';
+import '@mantine/dates/styles.css';
 import Sidebar from "./sidebar"
 import { createTheme, MantineProvider } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
@@ -41,7 +42,7 @@ export default function RootLayout({
             <ModalsProvider>
               <div className="flex h-screen">
                 <Sidebar />
-                <main className="flex-1 overflow-y-auto bg-background p-4">
+                <main className="flex-1 overflow-y-auto bg-background p-4 pb-[5rem] sm:pb-4">
                   {children}
                 </main>
               </div>
