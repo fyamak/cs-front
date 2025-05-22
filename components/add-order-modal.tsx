@@ -91,8 +91,8 @@ export default function AddOrderModal({ isOpen, products, organizations, onClose
         />
 
         <Select
-          label="Product"
-          placeholder="Select Product"
+          label="Organization"
+          placeholder="Select Organization"
           limit={20}
           data={organizationOptions}
           searchable

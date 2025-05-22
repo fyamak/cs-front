@@ -1,5 +1,5 @@
 import { IResponse } from "@/types/api-response-types";
-import { IOrder, IOrderHistory } from "@/types/product-types";
+import { IOrder, IOrderHistory } from "@/types/order-types";
 import { getData } from "@/utils/api";
 import { useState } from "react";
 
