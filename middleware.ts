@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export function middleware(request: NextRequest) {
-    const token = request.cookies.get('accessToken')?.value || request.headers.get('authorization')?.replace("Bearer ", "");
+    const token = request.cookies.get('refreshToken')?.value
 
     const isProtectedRoute = request.nextUrl.pathname.startsWith('/') || 
         request.nextUrl.pathname.startsWith('/orders') ||

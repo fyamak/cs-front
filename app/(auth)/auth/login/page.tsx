@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { IconX, IconCheck } from '@tabler/icons-react';
 import { Notification } from '@mantine/core';
 import { useRouter } from "next/navigation";

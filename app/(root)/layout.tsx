@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import "../globals.css";
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
-import Sidebar from "./sidebar"
+import Sidebar from "../sidebar"
 import { createTheme, MantineProvider } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
-import { AppWrapper } from "../context";
+import { AppWrapper } from "../../context";
 
 
 const theme = createTheme({});
