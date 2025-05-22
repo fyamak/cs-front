@@ -15,13 +15,12 @@ import {
 } from "lucide-react";
 import {
   Card,
-  Image,
   Text,
-  Badge,
-  Button,
   Group,
   Container,
 } from "@mantine/core";
+import { useRouter } from "next/navigation";
+
 
 interface Dashboard {
   productCount: number;
@@ -45,6 +44,7 @@ interface Dashboard {
 export default function Home() {
   const [dashInfo, setDashInfo] = useState<Dashboard>();
   const { currency, setCurrency } = useAppContext();
+  const router = useRouter()
 
   useEffect(() => {
     fetchProductCount();
@@ -168,31 +168,40 @@ export default function Home() {
         </Card>
 
         <Card
-          className="col-span-3"
-          shadow="sm"
-          padding="md"
-          radius="md"
-          withBorder
-        >
-          <Text size="lg" fw={500} mb="sm">
-            Recent Activities
-          </Text>
-          <div className="space-y-4 py-4">
-            {dashInfo?.lastProcessedOrders.map((o, index) => (
-              <div key={o.orderId || index} className="flex items-center space-x-3">
-                <div className="h-2 w-2 rounded-full bg-primary" />
-                <div className="flex-1 space-y-1">
-                  <p>
-                    {o.detail} ({o.productName})
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {getTimeAgo(o.updatedAt)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+  className="col-span-3"
+  shadow="sm"
+  padding="md"
+  radius="md"
+  withBorder
+>
+  <div className="flex items-center justify-between mb-4">
+    <Text size="lg" fw={500}>
+      Recent Activities
+    </Text>
+    <button
+      onClick={() => router.push("/orders/history")}
+      className="text-sm text-blue-600 hover:underline"
+    >
+      Show All
+    </button>
+  </div>
+
+  <div className="space-y-4 py-4">
+    {dashInfo?.lastProcessedOrders.map((o, index) => (
+      <div key={o.orderId || index} className="flex items-center space-x-3">
+        <div className="h-2 w-2 rounded-full bg-primary" />
+        <div className="flex-1 space-y-1">
+          <p>
+            {o.detail} ({o.productName})
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {getTimeAgo(o.updatedAt)}
+          </p>
+        </div>
+      </div>
+    ))}
+  </div>
+</Card>
       </div>
     </div>
   );
