@@ -5,7 +5,7 @@ import Link from "next/link";
 import AddProductModal from "@/components/add-product-modal";
 import UseFetchProducts from "@/hooks/use-fetch-products";
 import UseFetchCategories from "@/hooks/use-fetch-categories";
-import { Button, Input, Select } from "@mantine/core";
+import { Box, Button, Input, LoadingOverlay, Select } from "@mantine/core";
 import { Pagination, Text } from "@mantine/core";
 import { postData } from "@/utils/api";
 import { IAddProductForm } from "@/types/product-types";
@@ -18,12 +18,13 @@ import { useDebounce } from "use-debounce";
 
 const ITEMS_PER_PAGE = 100;
 
-export default function TryPage() {
+export default function ProductPage() {
   const isMobile = useMediaQuery("(max-width: 50em)");
   const [search, setSearch] = useState("");
   const [searchDebounce] = useDebounce(search, 500);
   const [selectedCategory, setSelectedCategory] = useState<string | null>("");
   const [isModalOpen, setModalOpen] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   const { products, fetchProducts } = UseFetchProducts();
   const { categories, categoryMap, fetchCategories } = UseFetchCategories();
@@ -32,8 +33,12 @@ export default function TryPage() {
   const [message, setMessage] = useState<string>("");
 
   useEffect(() => {
-    fetchProducts();
-    fetchCategories();
+    async function fetchData() {
+      setVisible(true);
+      await Promise.all([fetchProducts(), fetchCategories()]);
+      setVisible(false);
+    }
+    fetchData();
   }, []);
 
   const categoryOptions = categories.map((c) => ({
@@ -92,12 +97,14 @@ export default function TryPage() {
         ))
       ) : (
         data[activePage - 1].map((item) => (
-          <ProductCard 
+          <ProductCard
             key={item.id}
             name={item.name}
             sku={item.sku}
             totalQuantity={item.totalQuantity}
-            categoryName={categoryMap.get(item.categoryId) ?? "Unknown Category"}  
+            categoryName={
+              categoryMap.get(item.categoryId) ?? "Unknown Category"
+            }
           />
         ))
       )
@@ -192,44 +199,54 @@ export default function TryPage() {
         />
       </div>
 
-    {!isMobile ? (
-      <div className="overflow-x-auto border rounded-md">
-        <table className="min-w-full text-l text-left">
-          <thead className="bg-gray-100 text-gray-600 text-base sm:text-xl uppercase">
-            <tr className="font-bold">
-              <th className="px-4 py-2">Name</th>
-              <th className="px-4 py-2">SKU</th>
-              <th className="px-4 py-2">Category</th>
-              <th className="px-4 py-2">Quantity</th>
-              <th className="px-4 py-2">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">{items}</tbody>
-        </table>
-      </div>
-    ) : (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">{items}</div>
-    )}
-
-      <div className="flex flex-col items-center mt-10">
-        <Text className="text-gray-500" size="sm">
-          {paginationMessage}
-        </Text>
-        <Pagination
-          total={data.length}
-          value={activePage}
-          onChange={setPage}
-          siblings={isMobile ? 1 : 2}
-          mt="md"
-          size={isMobile ? "sm" : "lg"}
+      <Box pos="relative">
+        <LoadingOverlay
+          visible={visible}
+          zIndex={1000}
+          overlayProps={{ radius: "sm", blur: 2 }}
         />
-      </div>
 
-      <AddProductModal
-        isOpen={isModalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleAddProductModel}
-      />
+        {!isMobile ? (
+          <div className="overflow-x-auto border rounded-md">
+            <table className="min-w-full text-l text-left">
+              <thead className="bg-gray-100 text-gray-600 text-base sm:text-xl uppercase">
+                <tr className="font-bold">
+                  <th className="px-4 py-2">Name</th>
+                  <th className="px-4 py-2">SKU</th>
+                  <th className="px-4 py-2">Category</th>
+                  <th className="px-4 py-2">Quantity</th>
+                  <th className="px-4 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">{items}</tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {items}
+          </div>
+        )}
+
+        <div className="flex flex-col items-center mt-10">
+          <Text className="text-gray-500" size="sm">
+            {paginationMessage}
+          </Text>
+          <Pagination
+            total={data.length}
+            value={activePage}
+            onChange={setPage}
+            siblings={isMobile ? 1 : 2}
+            mt="md"
+            size={isMobile ? "sm" : "lg"}
+          />
+        </div>
+
+        <AddProductModal
+          isOpen={isModalOpen}
+          onClose={() => setModalOpen(false)}
+          onSubmit={handleAddProductModel}
+          />
+        </Box>
     </div>
   );
 }
