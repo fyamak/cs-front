@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import UseFetchOrganizations from "@/hooks/use-fetch-organizations";
-import { Button, Container, Input } from "@mantine/core";
+import { Box, Button, Container, Input, LoadingOverlay } from "@mantine/core";
 import OrganizationCard from "@/components/organization-card";
 import { InfiniteScroll } from "@/components/infinite-scroll";
 import {
@@ -20,11 +20,18 @@ export default function OrganizationPage() {
   const [isModalOpen, setModalOpen] = useState(false);
   const [status, setStatus] = useState<"success" | "error" | null>(null);
   const [message, setMessage] = useState<string>("");
+  const [visible, setVisible] = useState(false);
 
   const { organizations, fetchOrganizations } = UseFetchOrganizations();
+  
 
   useEffect(() => {
-    fetchOrganizations();
+    async function fetchData() {
+      setVisible(true);
+      await Promise.all([fetchOrganizations()]);
+      setVisible(false);
+    }
+    fetchData();
   }, []);
 
   const filteredOrganizations = organizations.filter((org) =>
@@ -99,31 +106,37 @@ export default function OrganizationPage() {
         size="md"
       />
 
-      <Container
-        fluid
-        py="md"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-      >
-        <InfiniteScroll<IOrganization>
-          data={filteredOrganizations}
-          itemsPerPage={24}
-          loader={
-            <div className="text-center py-4">
-              Loading more organizations...
-            </div>
-          }
-          endMessage={""}
-          renderItem={(org) => (
-            <div key={org.id} className="w-full">
-              <OrganizationCard
-                organization={org}
-                onDeleted={fetchOrganizations}
-              />
-            </div>
-          )}
+      <Box pos="relative" style={{ minHeight: "50px" }}>
+        <LoadingOverlay
+          visible={visible}
+          zIndex={1000}
+          overlayProps={{ radius: "sm", blur: 2 }}
         />
-      </Container>
-
+        <Container
+          fluid
+          py="md"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          <InfiniteScroll<IOrganization>
+            data={filteredOrganizations}
+            itemsPerPage={24}
+            loader={
+              <div className="text-center py-4">
+                Loading more organizations...
+              </div>
+            }
+            endMessage={""}
+            renderItem={(org) => (
+              <div key={org.id} className="w-full">
+                <OrganizationCard
+                  organization={org}
+                  onDeleted={fetchOrganizations}
+                />
+              </div>
+            )}
+          />
+        </Container>
+      </Box>
       <AddOrganizationModal
         isOpen={isModalOpen}
         onClose={() => setModalOpen(false)}
