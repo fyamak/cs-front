@@ -1,71 +1,113 @@
 "use client";
 
-import { getData } from "@/utils/api";
 import { useEffect, useState } from "react";
-import { IconX, IconCheck } from "@tabler/icons-react";
 import { Button, Container, Notification, Select } from "@mantine/core";
 import { ITransaction } from "@/types/product-types";
 import UseFetchProducts from "@/hooks/use-fetch-products";
-import { useForm } from "@mantine/form";
-import { DateTimePicker } from "@mantine/dates";
+import { DateTimePicker, DateValue } from "@mantine/dates";
 import { useMediaQuery } from "@mantine/hooks";
-import { InfiniteScroll } from "@/components/infinite-scroll";
 import TransactionCard from "@/components/transaction-card";
+import { useDebounce } from "use-debounce";
+import { IconCheck, IconX } from "@tabler/icons-react";
+
+const PRODUCT_PAGE_SIZE = 20;
+const TRANSACTION_PAGE_SIZE = 50;
 
 export default function TransactionsPage() {
   const isMobile = useMediaQuery("(max-width: 50em)");
-  const [transactions, setTransactions] = useState<ITransaction[]>([]);
-  const { products, fetchProducts } = UseFetchProducts();
+  const { pagedProductsResponse, fetchPagedProducts, fetchPagedTransactions } =
+    UseFetchProducts();
+  const [pagedTransactions, setPagedTransactions] = useState<ITransaction[]>(
+    []
+  );
+
+  const [loadingProduct, setLoadingProduct] = useState(false);
+  const [searchProduct, setSearchProduct] = useState("");
+  const [searchProductDebounce] = useDebounce(searchProduct, 1000);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [startDate, setStartDate] = useState<DateValue | null>(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - 1);
+    return date;
+  });
+  const [endDate, setEndDate] = useState<DateValue | null>(new Date());
+  const [includeFailures, setIncludeFailures] = useState<string | null>("false");
+  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
 
   const [status, setStatus] = useState<"success" | "error" | null>(null);
   const [message, setMessage] = useState<string>("");
 
-  const productOptions = products.map((p) => ({
+  const productOptions = pagedProductsResponse?.data.map((p) => ({
     value: p.id.toString(),
     label: p.name,
   }));
 
+  
   useEffect(() => {
-    fetchProducts();
+    setLoadingProduct(true);
+  }, [searchProduct]);
+
+  useEffect(() => {
+    fetchPagedProducts(1, PRODUCT_PAGE_SIZE, searchProductDebounce).finally(
+      () => setLoadingProduct(false)
+    );
+  }, [searchProductDebounce]);
+
+  useEffect(() => {
+    fetchPagedProducts;
   }, []);
 
-  const form = useForm({
-    mode: "uncontrolled",
-    initialValues: {
-      startDate: null,
-      endDate: null,
-      selectedProduct: null,
-    },
-  });
+  const loadMoreTransaction = async (pageNumber: number) => {
+    const transactionResponse =
+      (await fetchPagedTransactions(
+        pageNumber,
+        TRANSACTION_PAGE_SIZE,
+        startDate?.toISOString(),
+        endDate?.toISOString(),
+        includeFailures,
+        selectedProduct
+      )) || [];
 
-  const handleSubmit = async (formValues: any) => {
-    if (!formValues.startDate || !formValues.endDate) {
-      setMessage("Please select both start and end dates.");
+    if (transactionResponse.data.length === 0) {
+      setHasMore(false);
+    } else {
+      setPagedTransactions((prev) => {
+        const existingIds = new Set(prev.map((transaction) => transaction.id));
+        const filteredNewItems = transactionResponse.data.filter((transaction) => !existingIds.has(transaction.id));
+        return [...prev, ...filteredNewItems];
+      });
+      setPage(pageNumber);
+    }
+    
+    if (transactionResponse.status !== "Success") {
+      setHasMore(false);
+      setPagedTransactions([]);
       setStatus("error");
-      setTimeout(() => setStatus(null), 3000);
-      return;
+      setMessage(transactionResponse.message);
     }
-    var endpoint = `${formValues.startDate.toISOString()}/${formValues.endDate.toISOString()}`;
-    if (formValues.selectedProduct != null) {
-      endpoint += `?productId=${formValues.selectedProduct}`;
-    }
-    try {
-      const res = await getData("transactions/" + endpoint);
-      const response = res.data;
-      setTransactions(response.data || []);
 
-      if (response.status === "Success") {
-        setMessage(response.message);
-        setStatus("success");
-      } else {
-        setMessage(response.message);
-        setStatus("error");
-      }
-    } catch (error) {
-      setStatus("error");
-      console.log("Error: ", error);
-    }
+    setIsLoading(false);
     setTimeout(() => setStatus(null), 3000);
+  };
+
+  const handleLoadMore = () => {
+    loadMoreTransaction(page + 1);
+  };
+
+  const handleSubmitTemp = () => {
+    if (startDate && endDate && includeFailures) {
+      setHasMore(true);
+      setIsLoading(true);
+      setPagedTransactions([]);
+      loadMoreTransaction(1);
+    } else {
+      setStatus("error");
+      setMessage("Please fill the required fields");
+      setTimeout(() => setStatus(null), 3000);
+    }
   };
 
   return (
@@ -95,47 +137,75 @@ export default function TransactionsPage() {
       </div>
 
       <form
-        onSubmit={form.onSubmit((values) => handleSubmit(values))}
-        className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSubmitTemp();
+        }}
       >
-        <div>
-          <DateTimePicker
-            label="Start Date"
-            placeholder="01/01/1970 00:00"
-            clearable
-            required
-            key={form.key("startDate")}
-            {...form.getInputProps("startDate")}
-          />
-        </div>
+        <div className="space-y-4 md:space-y-0 md:space-x-4 md:flex md:flex-wrap items-end">
+          <div className="flex-1 min-w-[220px]">
+            <DateTimePicker
+              label="Start Date"
+              value={startDate}
+              onChange={setStartDate}
+              clearable
+              required
+              className="w-full"
+            />
+          </div>
 
-        <div>
-          <DateTimePicker
-            label="End Date"
-            placeholder="01/01/1970 00:00"
-            clearable
-            required
-            key={form.key("endDate")}
-            {...form.getInputProps("endDate")}
-          />
-        </div>
+          <div className="flex-1 min-w-[220px]">
+            <DateTimePicker
+              label="End Date"
+              value={endDate}
+              onChange={setEndDate}
+              clearable
+              required
+              className="w-full"
+            />
+          </div>
 
-        <div>
-          <Select
-            label="Product"
-            placeholder="Select Product"
-            limit={20}
-            data={productOptions}
-            searchable
-            clearable
-            {...form.getInputProps("selectedProduct")}
-          />
-        </div>
+          <div className="flex-1 min-w-[180px]">
+            <Select
+              label="Include Failures"
+              data={[
+                { value: "true", label: "Yes" },
+                { value: "false", label: "No" },
+              ]}
+              value={includeFailures}
+              onChange={setIncludeFailures}
+              clearable={false}
+              required
+              className="w-full"
+            />
+          </div>
 
-        <div className="flex justify-start">
-          <Button type="submit" className="w-full md:w-auto">
-            Submit
-          </Button>
+          <div className="flex-1 min-w-[200px]">
+            <Select
+              label="Product"
+              data={productOptions}
+              value={selectedProduct}
+              onChange={setSelectedProduct}
+              onSearchChange={setSearchProduct}
+              searchable
+              clearable
+              className="w-full"
+              nothingFoundMessage={
+                loadingProduct ? "Loading..." : "No products found"
+              }
+            />
+          </div>
+
+          <div className="w-full md:w-auto">
+            <Button
+              type="submit"
+              fullWidth={isMobile}
+              className="mt-2 md:mt-0"
+              loading={isLoading}
+            >
+              Submit
+            </Button>
+          </div>
         </div>
       </form>
 
@@ -145,120 +215,71 @@ export default function TransactionsPage() {
           py="md"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          <InfiniteScroll<ITransaction>
-            data={transactions}
-            itemsPerPage={24}
-            loader={
-              <div className="text-center py-4">Loading more orders...</div>
-            }
-            endMessage={""}
-            renderItem={(transaction) => (
-              <div key={transaction.id + transaction.type} className="w-full">
-                <TransactionCard
-                  key={transaction.id + transaction.type}
-                  id={transaction.id}
-                  product={transaction.product}
-                  organization={transaction.organization}
-                  quantity={transaction.quantity}
-                  price={transaction.price}
-                  date={
-                    transaction.date.substring(0, 10) +
-                    " " +
-                    transaction.date.substring(11, 16)
-                  }
-                  type={transaction.type}
-                  remainingQuantity={transaction.remainingQuantity}
-                />
-              </div>
-            )}
-          />
+          {pagedTransactions?.map((transaction) => (
+            <TransactionCard
+              key={transaction.id + transaction.type}
+              id={transaction.id}
+              productName={transaction.productName}
+              organizationName={transaction.organizationName}
+              quantity={transaction.quantity}
+              price={transaction.price}
+              date={
+                transaction.date.substring(0, 10) +
+                " " +
+                transaction.date.substring(11, 16)
+              }
+              type={transaction.type}
+              detail={transaction.detail}
+              isSuccessfull={transaction.isSuccessfull}
+            />
+          ))}
         </Container>
       ) : (
         <div className="overflow-x-auto rounded-md border">
           <table className="min-w-full table-auto">
-           <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-2 text-left font-semibold">Product</th>
-              <th className="px-4 py-2 text-left font-semibold">Organization</th>
-              <th className="px-4 py-2 text-left font-semibold">Price</th>
-              <th className="px-4 py-2 text-left font-semibold">Quantity</th>
-              <th className="px-4 py-2 text-left font-semibold">Date</th>
-              <th className="px-4 py-2 text-left font-semibold">Remaining Quantity</th>
-              <th className="px-4 py-2 text-left font-semibold">Type</th>
-            </tr>
-          </thead>
-            <tbody>
-              <InfiniteScroll<ITransaction>
-                data={transactions}
-                itemsPerPage={50}
-                loader={""}
-                endMessage={""}
-                isTable={true}
-                renderItem={(transaction) => (
-                  <tr
-                key={transaction.id + transaction.type}
-                className="border-t hover:bg-gray-50 transition-colors"
-              >
-                <td className="px-4 py-2">{transaction.product}</td>
-                <td className="px-4 py-2">{transaction.organization}</td>
-                <td className="px-4 py-2">{transaction.price}</td>
-                <td className="px-4 py-2">{transaction.quantity}</td>
-                <td className="px-4 py-2">
-                  {transaction.date.substring(0, 10)}{" "}
-                  {transaction.date.substring(11, 16)}
-                </td>
-                <td className="px-4 py-2">
-                  {transaction.remainingQuantity ?? "-"}
-                </td>
-                <td className="px-4 py-2">{transaction.type}</td>
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="px-4 py-2 text-left font-semibold">Product</th>
+                <th className="px-4 py-2 text-left font-semibold">
+                  Organization
+                </th>
+                <th className="px-4 py-2 text-left font-semibold">Quantity</th>
+                <th className="px-4 py-2 text-left font-semibold">Price</th>
+                <th className="px-4 py-2 text-left font-semibold">Date</th>
+                <th className="px-4 py-2 text-left font-semibold">Type</th>
+                <th className="px-4 py-2 text-left font-semibold">Detail</th>
               </tr>
-                )}
-              />
+            </thead>
+            <tbody>
+              {pagedTransactions?.map((transaction) => (
+                <tr
+                  key={transaction.id + transaction.type}
+                  className="border-t hover:bg-gray-50 transition-colors"
+                >
+                  <td className="px-4 py-2">{transaction.productName}</td>
+                  <td className="px-4 py-2">{transaction.organizationName}</td>
+                  <td className="px-4 py-2">{transaction.quantity}</td>
+                  <td className="px-4 py-2">{transaction.price}</td>
+                  <td className="px-4 py-2">
+                    {transaction.date.substring(0, 10)}{" "}
+                    {transaction.date.substring(11, 16)}
+                  </td>
+                  <td className="px-4 py-2">{transaction.type}</td>
+                  <td className="px-4 py-2">{transaction.detail}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* <div className="overflow-x-auto border rounded-md">
-        <table className="min-w-full table-auto text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-2 text-left font-semibold">Product</th>
-              <th className="px-4 py-2 text-left font-semibold">
-                Organization
-              </th>
-              <th className="px-4 py-2 text-left font-semibold">Price</th>
-              <th className="px-4 py-2 text-left font-semibold">Quantity</th>
-              <th className="px-4 py-2 text-left font-semibold">Date</th>
-              <th className="px-4 py-2 text-left font-semibold">
-                Remaining Quantity
-              </th>
-              <th className="px-4 py-2 text-left font-semibold">Type</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.map((transaction) => (
-              <tr
-                key={transaction.id + transaction.type}
-                className="border-t hover:bg-gray-50 transition-colors"
-              >
-                <td className="px-4 py-2">{transaction.product}</td>
-                <td className="px-4 py-2">{transaction.organization}</td>
-                <td className="px-4 py-2">{transaction.price}</td>
-                <td className="px-4 py-2">{transaction.quantity}</td>
-                <td className="px-4 py-2">
-                  {transaction.date.substring(0, 10)}{" "}
-                  {transaction.date.substring(11, 16)}
-                </td>
-                <td className="px-4 py-2">
-                  {transaction.remainingQuantity ?? "-"}
-                </td>
-                <td className="px-4 py-2">{transaction.type}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div> */}
+      {hasMore && (
+        <div className="flex justify-center my-4">
+          <Button onClick={handleLoadMore} loading={isLoading}>
+            Load More
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

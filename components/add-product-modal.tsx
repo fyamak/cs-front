@@ -2,8 +2,8 @@ import UseFetchCategories from "@/hooks/use-fetch-categories";
 import { IAddProductForm } from "@/types/product-types";
 import { postData } from "@/utils/api";
 import { Modal, TextInput, Button, InputBase, Select } from "@mantine/core";
-import { useForm } from "@mantine/form";
 import { useEffect, useState } from "react";
+import { useDebounce } from "use-debounce";
 
 type Props = {
   isOpen: boolean;
@@ -11,46 +11,45 @@ type Props = {
   onSubmit: (formData: IAddProductForm) => void;
 };
 
+const CATEGORY_PAGE_SIZE = 20;
+
 export default function AddProductModal({ isOpen, onClose, onSubmit }: Props) {
+  const [loading, setLoading] = useState(false);
+
   const [searchValue, setSearchValue] = useState("");
+  const [searchDebounce] = useDebounce(searchValue, 1000);
 
   const [sku, setSku] = useState("");
   const [productName, setProductName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>("");
-  const [isCategoryUpdated, setIsCategoryUpdated] = useState<boolean>(false);
 
-  const { categories, fetchCategories } = UseFetchCategories();
+  const { pagedCategories, fetchPagedCategories } = UseFetchCategories();
 
-  const categoryOptions = categories.map((c) => ({
+  const categoryOptions = pagedCategories.map((c) => ({
     value: c.id.toString(), // convert ID to string for Select
     label: c.name,
   }));
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    setLoading(true);
+  }, [searchValue]);
 
-  const form = useForm({
-    mode: "uncontrolled",
-    initialValues: {
-      sku: "",
-      productName: "",
-      categoryId: "",
-    },
-  });
+  useEffect(() => {
+    fetchPagedCategories(1,CATEGORY_PAGE_SIZE, searchDebounce).finally(() =>
+      setLoading(false)
+    );
+  }, [searchDebounce]);
 
   const handleSubmit = () => {
     onSubmit({
       sku: sku,
       productName: productName,
       categoryId: selectedCategory,
-      isCategoryUpdated: isCategoryUpdated
     });
     onClose();
     setSku("");
     setProductName("");
     setSelectedCategory("");
-    setIsCategoryUpdated(false);
   };
 
   const handleCreateCategory = async (name: string) => {
@@ -59,8 +58,6 @@ export default function AddProductModal({ isOpen, onClose, onSubmit }: Props) {
       const response = res.data;
       const newCategory = response.data;
       setSelectedCategory(newCategory.id);
-      fetchCategories();
-      setIsCategoryUpdated(true);
     } catch (error) {
       console.error("Failed to create category:", error);
     }
@@ -102,12 +99,17 @@ export default function AddProductModal({ isOpen, onClose, onSubmit }: Props) {
         limit={20}
         mt="md"
         nothingFoundMessage={
-          <div
+          loading ? (
+            "Loading..."
+          ) :
+          (
+            <div
             className="text-blue-600 cursor-pointer"
             onClick={() => handleCreateCategory(searchValue)}
-          >
-            Create "{searchValue}"
-          </div>
+            >
+              Create "{searchValue}"
+            </div>
+          )
         }
         searchable
         clearable

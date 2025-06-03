@@ -11,7 +11,9 @@ export interface IOrder {
 export interface IOrderHistory {
     id: number;
     productId: number;
+    productName: string;
     organizationId: number;
+    organizationName: string;
     quantity: number;
     price: number;
     date: string;

@@ -1,126 +1,119 @@
-"use client"
+"use client";
 
-import { useAppContext } from "@/context"
-import { useEffect, useState } from "react"
-import { Notification } from '@mantine/core';
-import { IconX, IconCheck } from '@tabler/icons-react';
-import { patchData, postData } from "@/utils/api";
-import { IUser } from "@/types/user-types";
-import { IResponse } from "@/types/api-response-types";
-import { IUserForm } from "@/types/state-object-types";
+import { useEffect, useState } from "react";
+import { Button, Container, Notification, Select } from "@mantine/core";
+import { ITransaction } from "@/types/product-types";
+import UseFetchProducts from "@/hooks/use-fetch-products";
+import { DateTimePicker, DateValue } from "@mantine/dates";
+import { useMediaQuery } from "@mantine/hooks";
+import TransactionCard from "@/components/transaction-card";
+import { useDebounce } from "use-debounce";
+import { IconCheck, IconX } from "@tabler/icons-react";
 
+const PRODUCT_PAGE_SIZE = 20;
+const TRANSACTION_PAGE_SIZE = 50;
 
-export default function SettingsPage() {
-  const [userForm, setUserForm] = useState<IUserForm>({
-    fullName: "",
-    phoneNumber: "",
-    receiveEmail: false,
-    receiveLowStockAlert: false,
-    localCurrency: ""
-  })
+export default function TransactionsPage() {
+  const isMobile = useMediaQuery("(max-width: 50em)");
+  const { pagedProductsResponse, fetchPagedProducts, fetchPagedTransactions } =
+    UseFetchProducts();
+  const [pagedTransactions, setPagedTransactions] = useState<ITransaction[]>(
+    []
+  );
 
-  const [user, setUser] = useState<IUser>()
-  const { currency, setCurrency } = useAppContext()
+  const [loadingProduct, setLoadingProduct] = useState(false);
+  const [searchProduct, setSearchProduct] = useState("");
+  const [searchProductDebounce] = useDebounce(searchProduct, 1000);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [startDate, setStartDate] = useState<DateValue | null>(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - 1);
+    return date;
+  });
+  const [endDate, setEndDate] = useState<DateValue | null>(new Date());
+  const [includeFailures, setIncludeFailures] = useState<string | null>("false");
+  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
 
   const [status, setStatus] = useState<"success" | "error" | null>(null);
   const [message, setMessage] = useState<string>("");
 
+  const productOptions = pagedProductsResponse?.data.map((p) => ({
+    value: p.id.toString(),
+    label: p.name,
+  }));
+
+  
   useEffect(() => {
-    fetchUserInformation();
-  }, [])
+    setLoadingProduct(true);
+  }, [searchProduct]);
 
-  const handleChange = (e: any) => {
-    const { name, value, type, checked } = e.target;
+  useEffect(() => {
+    fetchPagedProducts(1, PRODUCT_PAGE_SIZE, searchProductDebounce).finally(
+      () => setLoadingProduct(false)
+    );
+  }, [searchProductDebounce]);
 
-    setUserForm(prev => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : 
-              value,
-    }));
+  useEffect(() => {
+    fetchPagedProducts;
+  }, []);
+
+  const loadMoreTransaction = async (pageNumber: number) => {
+    const transactionResponse =
+      (await fetchPagedTransactions(
+        pageNumber,
+        TRANSACTION_PAGE_SIZE,
+        startDate?.toISOString(),
+        endDate?.toISOString(),
+        includeFailures,
+        selectedProduct
+      )) || [];
+
+    if (transactionResponse.data.length === 0) {
+      setHasMore(false);
+    } else {
+      setPagedTransactions((prev) => {
+        const existingIds = new Set(prev.map((transaction) => transaction.id));
+        const filteredNewItems = transactionResponse.data.filter((transaction) => !existingIds.has(transaction.id));
+        return [...prev, ...filteredNewItems];
+      });
+      setPage(pageNumber);
+    }
+    
+    if (transactionResponse.status !== "Success") {
+      setHasMore(false);
+      setPagedTransactions([]);
+      setStatus("error");
+      setMessage(transactionResponse.message);
+    }
+
+    setIsLoading(false);
+    setTimeout(() => setStatus(null), 3000);
   };
-  
 
-  const fetchUserInformation = async () => {
-    try {
-      const res = await postData("GetProfileInfo", {})
-      const response: IResponse = res.data
-      const userData: IUser= response.data
+  const handleLoadMore = () => {
+    loadMoreTransaction(page + 1);
+  };
 
-      if (response.status === "Success") {
-        setUser(userData)
-        setCurrency(userData.currency)
-        
-        setUserForm({
-          fullName: userData.fullName,
-          phoneNumber: userData.phoneNumber,
-          receiveEmail: userData.receiveEmail,
-          receiveLowStockAlert: userData.receiveLowStockAlert,
-          localCurrency: userData.currency
-        });
-      } 
-      else {
-        setMessage(response.message)
-        setStatus("error");
-      }
-    } catch (error) {
-      console.log("Error fetching user information: ", error);        
+  const handleSubmitTemp = () => {
+    if (startDate && endDate && includeFailures) {
+      setHasMore(true);
+      setIsLoading(true);
+      setPagedTransactions([]);
+      loadMoreTransaction(1);
+    } else {
       setStatus("error");
+      setMessage("Please fill the required fields");
+      setTimeout(() => setStatus(null), 3000);
     }
-    setTimeout(() => setStatus(null), 3000); 
-  }
-
-  const handleSaveSettings = async () => {
-    if (!user) {
-      console.error("User data not loaded yet");
-      return;
-    }
-  
-    const updatedFields: Partial<IUser> = {};
-  
-    if (userForm.fullName !== user.fullName) {
-      updatedFields.fullName = userForm.fullName;
-    }
-    if (userForm.phoneNumber !== user.phoneNumber) {
-      updatedFields.phoneNumber = userForm.phoneNumber;
-    }
-    if (userForm.receiveEmail !== user.receiveEmail) {
-      updatedFields.receiveEmail = userForm.receiveEmail;
-    }
-    if (userForm.receiveLowStockAlert !== user.receiveLowStockAlert) {
-      updatedFields.receiveLowStockAlert = userForm.receiveLowStockAlert;
-    }
-    if (userForm.localCurrency !== user.currency) {
-      updatedFields.currency = userForm.localCurrency;
-    }
-    console.log("updatedFields : ", updatedFields)
-  
-    if (Object.keys(updatedFields).length === 0) {
-      return; // There is no changes
-    }
-  
-    try {
-      const res = await patchData("api/User", updatedFields);
-      const response = res.data
-      
-      if (response.status === "Success") {
-        setMessage(response.message)
-        setStatus("success");
-        fetchUserInformation();
-      } 
-      else {
-        setMessage(response.message)
-        setStatus("error");
-      }
-    } catch (error) {
-      setStatus("error");
-    }
-    setTimeout(() => setStatus(null), 3000);    
-  }
+  };
 
   return (
     <div className="space-y-6">
       {status && (
-        <div className="fixed top-28 right-5">
+        <div className="fixed top-24 right-2 sm:right-5 z-[9999]">
           <Notification
             withCloseButton={false}
             icon={
@@ -139,160 +132,154 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <h1 className="text-3xl font-bold">Settings</h1>
-
-      <div className="grid gap-6">
-        {/* User Information Card */}
-        <div className="rounded-lg border p-6 shadow-sm">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold">User Information</h2>
-            <p className="text-sm text-muted-foreground">Update user details</p>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium block">
-                Email Address
-              </label>
-              <div
-                id="email"
-                className="w-full rounded-md border px-3 py-2 text-m focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-              >
-                {user?.email || "Email field"}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label
-                htmlFor="companyName"
-                className="text-sm font-medium block"
-              >
-                Full Name
-              </label>
-              <input
-                id="fullName"
-                name="fullName"
-                placeholder="Enter full name"
-                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-                value={userForm.fullName}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="phone" className="text-sm font-medium block">
-                Phone Number
-              </label>
-              <input
-                id="phone"
-                name="phoneNumber"
-                placeholder="Enter phone number"
-                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-                value={userForm.phoneNumber}
-                onChange={handleChange}
-              />
-            </div>
-            {/* there is a problem here SOLVE IT*/}
-            <div className="space-y-2">
-              <label htmlFor="currency" className="text-sm font-medium block">
-                Currency
-              </label>
-              <select
-                id="currency"
-                name="currency"
-                className="w-full rounded-md border px-3 py-2 text-sm bg-white"
-                value={userForm.localCurrency}
-                onChange={handleChange}
-              >
-                <option value="$">USD ($)</option>
-                <option value="€">EUR (€)</option>
-                <option value="£">GBP (£)</option>
-                <option value="₺">TL (₺)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Notification Card */}
-          <div className="rounded-lg border p-6 shadow-sm w-full md:w-1/2">
-            <div className="mb-4">
-              <h2 className="text-xl font-semibold">Notifications</h2>
-              <p className="text-sm text-muted-foreground">
-                Configure how you receive notifications and alerts
-              </p>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium block">
-                    Email Notifications
-                  </label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive notifications about orders and inventory updates
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  name="receiveEmail"
-                  checked={userForm.receiveEmail}
-                  onChange={handleChange}
-                  className="h-5 w-5"
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium block">
-                    Low Stock Alerts
-                  </label>
-                  <p className="text-sm text-muted-foreground">
-                    Get notified when products are running low
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  name="receiveLowStockAlert"
-                  checked={userForm.receiveLowStockAlert}
-                  onChange={handleChange}
-                  className="h-5 w-5"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Data Management Card */}
-          <div className="rounded-lg border p-6 shadow-sm w-full md:w-1/2">
-            <div className="mb-4">
-              <h2 className="text-xl font-semibold">Data Management</h2>
-              <p className="text-sm text-muted-foreground">
-                Manage your data and export options
-              </p>
-            </div>
-            <div className="space-y-6">
-              <div>
-                <h4 className="text-sm font-medium mb-2">Export Data</h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Download your inventory and order history (NOT AVAILABLE)
-                </p>
-                <div className="flex space-x-4">
-                  <button className="rounded-md border px-4 py-2 text-sm hover:bg-gray-100">
-                    Export Inventory
-                  </button>
-                  <button className="rounded-md border px-4 py-2 text-sm hover:bg-gray-100">
-                    Export Orders
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Transactions</h1>
       </div>
-      <div>
-        <button
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 active:scale-95 transition transform duration-100"
-          onClick={() => handleSaveSettings()}
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSubmitTemp();
+        }}
+      >
+        <div className="space-y-4 md:space-y-0 md:space-x-4 md:flex md:flex-wrap items-end">
+          <div className="flex-1 min-w-[220px]">
+            <DateTimePicker
+              label="Start Date"
+              value={startDate}
+              onChange={setStartDate}
+              clearable
+              required
+              className="w-full"
+            />
+          </div>
+
+          <div className="flex-1 min-w-[220px]">
+            <DateTimePicker
+              label="End Date"
+              value={endDate}
+              onChange={setEndDate}
+              clearable
+              required
+              className="w-full"
+            />
+          </div>
+
+          <div className="flex-1 min-w-[180px]">
+            <Select
+              label="Include Failures"
+              data={[
+                { value: "true", label: "Yes" },
+                { value: "false", label: "No" },
+              ]}
+              value={includeFailures}
+              onChange={setIncludeFailures}
+              clearable={false}
+              required
+              className="w-full"
+            />
+          </div>
+
+          <div className="flex-1 min-w-[200px]">
+            <Select
+              label="Product"
+              data={productOptions}
+              value={selectedProduct}
+              onChange={setSelectedProduct}
+              onSearchChange={setSearchProduct}
+              searchable
+              clearable
+              className="w-full"
+              nothingFoundMessage={
+                loadingProduct ? "Loading..." : "No products found"
+              }
+            />
+          </div>
+
+          <div className="w-full md:w-auto">
+            <Button
+              type="submit"
+              fullWidth={isMobile}
+              className="mt-2 md:mt-0"
+              loading={isLoading}
+            >
+              Submit
+            </Button>
+          </div>
+        </div>
+      </form>
+
+      {isMobile ? (
+        <Container
+          fluid
+          py="md"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          Save Settings
-        </button>
-      </div>
+          {pagedTransactions?.map((transaction) => (
+            <TransactionCard
+              key={transaction.id + transaction.type}
+              id={transaction.id}
+              productName={transaction.productName}
+              organizationName={transaction.organizationName}
+              quantity={transaction.quantity}
+              price={transaction.price}
+              date={
+                transaction.date.substring(0, 10) +
+                " " +
+                transaction.date.substring(11, 16)
+              }
+              type={transaction.type}
+              detail={transaction.detail}
+              isSuccessfull={transaction.isSuccessfull}
+            />
+          ))}
+        </Container>
+      ) : (
+        <div className="overflow-x-auto rounded-md border">
+          <table className="min-w-full table-auto">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="px-4 py-2 text-left font-semibold">Product</th>
+                <th className="px-4 py-2 text-left font-semibold">
+                  Organization
+                </th>
+                <th className="px-4 py-2 text-left font-semibold">Quantity</th>
+                <th className="px-4 py-2 text-left font-semibold">Price</th>
+                <th className="px-4 py-2 text-left font-semibold">Date</th>
+                <th className="px-4 py-2 text-left font-semibold">Type</th>
+                <th className="px-4 py-2 text-left font-semibold">Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pagedTransactions?.map((transaction) => (
+                <tr
+                  key={transaction.id + transaction.type}
+                  className="border-t hover:bg-gray-50 transition-colors"
+                >
+                  <td className="px-4 py-2">{transaction.productName}</td>
+                  <td className="px-4 py-2">{transaction.organizationName}</td>
+                  <td className="px-4 py-2">{transaction.quantity}</td>
+                  <td className="px-4 py-2">{transaction.price}</td>
+                  <td className="px-4 py-2">
+                    {transaction.date.substring(0, 10)}{" "}
+                    {transaction.date.substring(11, 16)}
+                  </td>
+                  <td className="px-4 py-2">{transaction.type}</td>
+                  <td className="px-4 py-2">{transaction.detail}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {hasMore && (
+        <div className="flex justify-center my-4">
+          <Button onClick={handleLoadMore} loading={isLoading}>
+            Load More
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

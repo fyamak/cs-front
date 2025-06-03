@@ -56,14 +56,14 @@ export default function OrganizationCard({ organization, onDeleted }: Props) {
         {organization.name}
       </Text>
 
-      <Text size="sm" c="dimmed" mb="xs">
-        📍 {organization.address}
+      <Text size="sm" c="dimmed" mb="sm">
+        📧 {organization.email}
       </Text>
       <Text size="sm" c="dimmed" mb="xs">
         📞 {organization.phone}
       </Text>
-      <Text size="sm" c="dimmed" mb="sm">
-        📧 {organization.email}
+      <Text size="sm" c="dimmed" mb="xs">
+        📍 {organization.address}
       </Text>
 
       {/* <Button color="blue" fullWidth mt="md" radius="md">

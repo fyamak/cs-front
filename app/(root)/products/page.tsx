@@ -16,101 +16,72 @@ import { useMediaQuery } from "@mantine/hooks";
 import ProductCard from "@/components/product-card";
 import { useDebounce } from "use-debounce";
 
-const ITEMS_PER_PAGE = 100;
+const PRODUCT_PAGE_SIZE = 100;
+const CATEGORY_PAGE_SIZE = 20;
 
 export default function ProductPage() {
   const isMobile = useMediaQuery("(max-width: 50em)");
-  const [search, setSearch] = useState("");
-  const [searchDebounce] = useDebounce(search, 500);
+
+  const [productSearch, setProductSearch] = useState("");
+  const [productSearchDebounce] = useDebounce(productSearch, 1000);
+  const [categorySearch, setCategorySearch] = useState("");
+  const [categorySearchDebounce] = useDebounce(categorySearch, 1000);
+  const [isCategoryLoading, setIsCategoryLoading] = useState(false);
+
   const [selectedCategory, setSelectedCategory] = useState<string | null>("");
   const [isModalOpen, setModalOpen] = useState(false);
   const [visible, setVisible] = useState(false);
-
-  const { products, fetchProducts } = UseFetchProducts();
-  const { categories, categoryMap, fetchCategories } = UseFetchCategories();
+  const [activePage, setActivePage] = useState(1);
+  
+  const { pagedProductsResponse, fetchPagedProducts } = UseFetchProducts();
+  const { pagedCategories, fetchPagedCategories } = UseFetchCategories();
 
   const [status, setStatus] = useState<"success" | "error" | null>(null);
   const [message, setMessage] = useState<string>("");
 
-  useEffect(() => {
-    async function fetchData() {
+  useEffect(()=>{
+    const fetchData = async () => {
       setVisible(true);
-      await Promise.all([fetchProducts(), fetchCategories()]);
+      await fetchPagedProducts(activePage, PRODUCT_PAGE_SIZE, productSearchDebounce, Number(selectedCategory));
       setVisible(false);
     }
-    fetchData();
-  }, []);
+    fetchData()
+  }, [activePage])
 
-  const categoryOptions = categories.map((c) => ({
+  useEffect(() => {
+    const fetchData = async () => {
+      setVisible(true);
+      setActivePage(1);
+      await fetchPagedProducts(activePage, PRODUCT_PAGE_SIZE, productSearchDebounce, Number(selectedCategory));
+      setVisible(false);
+    }
+    fetchData()
+  }, [productSearchDebounce,selectedCategory]);
+
+  
+  useEffect(()=> {
+    setIsCategoryLoading(true)
+  }, [categorySearch])
+  useEffect(()=> {
+    fetchPagedCategories(1, CATEGORY_PAGE_SIZE, categorySearchDebounce)
+    setIsCategoryLoading(false)
+  }, [categorySearchDebounce])
+
+
+
+  const categoryOptions = pagedCategories.map((c) => ({
     value: c.id.toString(), // convert ID to string for Select
     label: c.name,
+    // (c.name)
   }));
 
-  const filteredProducts = products.filter((product) => {
-    const category = Number(selectedCategory);
-    const lowerSearch = searchDebounce.toLowerCase();
-    const matchesSearch =
-      product.name.toLowerCase().includes(lowerSearch) ||
-      product.sku.toLowerCase().includes(lowerSearch);
-    const matchesCategory = category === 0 || product.categoryId === category;
-    return matchesSearch && matchesCategory;
-  });
-
-  //pagination
-  const [activePage, setPage] = useState(1);
+ 
   const paginationMessage = `Showing ${
-    ITEMS_PER_PAGE * (activePage - 1) + 1
-  } – ${Math.min(filteredProducts.length, ITEMS_PER_PAGE * activePage)} of ${
-    filteredProducts.length
+    PRODUCT_PAGE_SIZE * (activePage - 1) + 1
+  } – ${Math.min(pagedProductsResponse?.totalCount || 0, PRODUCT_PAGE_SIZE * activePage)} of ${
+    pagedProductsResponse?.totalCount
   }`;
-  const data = chunk(filteredProducts, ITEMS_PER_PAGE);
-  const items =
-    data.length > 0 ? (
-      !isMobile ? (
-        data[activePage - 1].map((item) => (
-          <tr key={item.id} className="hover:bg-gray-50">
-            <td className="px-4 py-2 font-medium">
-              <Link
-                href={`/product/${item.id}`}
-                className="font-semibold hover:underline"
-              >
-                {item.name}
-              </Link>
-            </td>
-            <td className="px-4 py-2">{item.sku}</td>
-            <td className="px-4 py-2">
-              {categoryMap.get(item.categoryId) ?? "Unknown Category"}
-            </td>
-            <td className="px-4 py-2">{item.totalQuantity}</td>
-            <td className="px-4 py-2">
-              <span
-                className={`px-2 py-1 text-xs rounded-full ${
-                  item.totalQuantity > 0
-                    ? "bg-green-200 text-green-800"
-                    : "bg-red-200 text-red-800"
-                }`}
-              >
-                {item.totalQuantity > 0 ? "Stocked" : "Empty"}
-              </span>
-            </td>
-          </tr>
-        ))
-      ) : (
-        data[activePage - 1].map((item) => (
-          <ProductCard
-            key={item.id}
-            name={item.name}
-            sku={item.sku}
-            totalQuantity={item.totalQuantity}
-            categoryName={
-              categoryMap.get(item.categoryId) ?? "Unknown Category"
-            }
-          />
-        ))
-      )
-    ) : (
-      <></>
-    );
+
 
   const handleAddProductModel = async (formData: IAddProductForm) => {
     try {
@@ -124,10 +95,7 @@ export default function ProductPage() {
       if (response.status === "Success") {
         setMessage(response.message);
         setStatus("success");
-        fetchProducts();
-        if (formData.isCategoryUpdated) {
-          fetchCategories();
-        }
+        setActivePage(1);
       } else {
         setMessage(response.message);
         setStatus("error");
@@ -137,6 +105,16 @@ export default function ProductPage() {
       console.log("Error: ", error);
     }
     setTimeout(() => setStatus(null), 3000);
+  };
+
+  const getStockBadge = (quantity: number) => {
+    const isInStock = quantity > 0;
+    const styles = isInStock
+      ? "bg-green-200 text-green-800"
+      : "bg-red-200 text-red-800";
+  
+    const label = isInStock ? "In Stock" : "Insufficient Stock";
+    return <span className={`px-2 py-1 text-xs rounded-full ${styles}`}> {label} </span>
   };
 
   return (
@@ -176,11 +154,11 @@ export default function ProductPage() {
         <Input
           className="flex-1"
           placeholder="Search products..."
-          value={search}
-          onChange={(event) => setSearch(event.currentTarget.value)}
+          value={productSearch}
+          onChange={(event) => setProductSearch(event.currentTarget.value)}
           rightSection={
-            search !== "" ? (
-              <Input.ClearButton onClick={() => setSearch("")} />
+            productSearch !== "" ? (
+              <Input.ClearButton onClick={() => setProductSearch("")} />
             ) : undefined
           }
           rightSectionPointerEvents="auto"
@@ -189,13 +167,20 @@ export default function ProductPage() {
 
         <Select
           placeholder="Select Category"
-          limit={20}
           data={categoryOptions}
           value={selectedCategory}
           onChange={setSelectedCategory}
+          onSearchChange={setCategorySearch}
           searchable
           clearable
           size={isMobile ? "sm" : "md"}
+          nothingFoundMessage={
+          isCategoryLoading ? (
+            "Loading..."
+          ) : (
+            "No categories found"
+          )
+        }
         />
       </div>
 
@@ -218,12 +203,35 @@ export default function ProductPage() {
                   <th className="px-4 py-2">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">{items}</tbody>
+              <tbody className="divide-y">
+                {pagedProductsResponse?.data.map((product) => (
+                  <tr key={product.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 font-medium">
+                        <Link href={`/product/${product.id}`} className="font-semibold hover:underline">
+                          {product.name}
+                        </Link>
+                        </td>
+                    <td className="px-4 py-2">{product.sku}</td>
+                    <td className="px-4 py-2">{product.categoryName}</td>
+                    <td className="px-4 py-2">{product.totalQuantity}</td>
+                    <td className="px-4 py-2">{getStockBadge(product.totalQuantity)}</td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {items}
+            {pagedProductsResponse?.data.map((product) => (
+              <ProductCard
+                key={product.id}
+                id={product.id}
+                name={product.name}
+                sku={product.sku}
+                totalQuantity={product.totalQuantity}
+                categoryName={product.categoryName}
+              />
+            ))}
           </div>
         )}
 
@@ -232,9 +240,9 @@ export default function ProductPage() {
             {paginationMessage}
           </Text>
           <Pagination
-            total={data.length}
+            total={Math.ceil((pagedProductsResponse?.totalCount || 0) / PRODUCT_PAGE_SIZE)}
             value={activePage}
-            onChange={setPage}
+            onChange={setActivePage}
             siblings={isMobile ? 1 : 2}
             mt="md"
             size={isMobile ? "sm" : "lg"}
@@ -249,13 +257,4 @@ export default function ProductPage() {
         </Box>
     </div>
   );
-}
-
-function chunk<T>(array: T[], size: number): T[][] {
-  if (!array.length) {
-    return [];
-  }
-  const head = array.slice(0, size);
-  const tail = array.slice(size);
-  return [head, ...chunk(tail, size)];
 }

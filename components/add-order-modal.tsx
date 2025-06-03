@@ -4,31 +4,71 @@ import { IProduct } from "@/types/product-types";
 import { IOrganization } from "@/types/organization-types";
 import { DateTimePicker } from '@mantine/dates';
 import { postData } from "@/utils/api";
+import { useEffect, useState } from "react";
+import { useDebounce } from "use-debounce";
+import UseFetchProducts from "@/hooks/use-fetch-products";
+import UseFetchOrganizations from "@/hooks/use-fetch-organizations";
 
 type Props = {
   isOpen: boolean,
-  products: IProduct[],
-  organizations: IOrganization[],
   onClose: () => void,
   onSubmit: (message: string, status: "success" | "error" | null) => void,
 };
 
-export default function AddOrderModal({ isOpen, products, organizations, onClose, onSubmit }: Props) {  
-  const productOptions = products.map((p) => ({
+const PAGE_SIZE = 20;
+
+export default function AddOrderModal({ isOpen, onClose, onSubmit }: Props) {  
+  const [loadingProduct, setLoadingProduct] = useState(false);
+  const [loadingOrganization, setLoadingOrganization] = useState(false);
+  
+  const [searchProduct, setSearchProduct] = useState("");
+  const [searchProductDebounce] = useDebounce(searchProduct, 1000);
+  const [searchOrganization, setSearchOrganization] = useState("");
+  const [searchOrganizationDebounce] = useDebounce(searchOrganization, 1000);
+  
+  const [selectedProduct, setSelectedProduct] = useState<string | null>("");
+  const [selectedOrganization, setSelectedOrganization] = useState<string | null>("");
+  
+
+  const { pagedProductsResponse, fetchPagedProducts } = UseFetchProducts();
+  const { pagedOrganizations, fetchPagedOrganizations } = UseFetchOrganizations();
+  
+
+  const productOptions = pagedProductsResponse?.data.map((p) => ({
     value: p.id.toString(), 
     label: p.name,
   }));
 
-  const organizationOptions = organizations.map((o) => ({
+  const organizationOptions = pagedOrganizations?.map((o) => ({
     value: o.id.toString(), 
     label: o.name,
   }));
 
+  useEffect(() => {
+    setLoadingProduct(true);
+  }, [searchProduct]);
+
+  useEffect(() => {
+    fetchPagedProducts(1,PAGE_SIZE, searchProductDebounce).finally(() =>
+      setLoadingProduct(false)
+    );
+  }, [searchProductDebounce]);
+
+
+  useEffect(() => {
+    setLoadingOrganization(true);
+  }, [searchOrganization]);
+
+  useEffect(() => {
+    fetchPagedOrganizations(1,PAGE_SIZE, searchOrganizationDebounce).finally(() =>
+      setLoadingOrganization(false)
+    );
+  }, [searchOrganizationDebounce]);
+
+
   const form = useForm({
     mode: "uncontrolled",
     initialValues: {
-      selectedProduct: null,
-      selectedOrganization: null,
       quantity: null,
       price: null,
       date: null,
@@ -39,8 +79,8 @@ export default function AddOrderModal({ isOpen, products, organizations, onClose
   const handleSubmit = async (formData: any) => {
     try {
         const res = await postData("orders", {
-            productId: formData.selectedProduct,
-            organizationId : formData.selectedOrganization,
+            productId: selectedProduct,
+            organizationId : selectedOrganization,
             quantity: formData.quantity,
             price: formData.price,
             date: formData.date,
@@ -80,14 +120,17 @@ export default function AddOrderModal({ isOpen, products, organizations, onClose
         <Select
           label="Product"
           placeholder="Select Product"
-          limit={20}
           data={productOptions}
+          value={selectedProduct}
+          onChange={setSelectedProduct}
+          onSearchChange={setSearchProduct}
           searchable
           clearable
           required
           mb={"md"}
-          key={form.key('selectedProduct')}
-          {...form.getInputProps('selectedProduct')}
+          nothingFoundMessage={
+            loadingProduct ? ( "Loading...") : ( "No products found" )
+          }
         />
 
         <Select
@@ -95,12 +138,16 @@ export default function AddOrderModal({ isOpen, products, organizations, onClose
           placeholder="Select Organization"
           limit={20}
           data={organizationOptions}
+          value={selectedOrganization}
+          onChange={setSelectedOrganization}
+          onSearchChange={setSearchOrganization}
           searchable
           clearable
           required
           mb={"md"}
-          key={form.key('selectedOrganization')}
-          {...form.getInputProps('selectedOrganization')}
+          nothingFoundMessage={
+            loadingOrganization ? ( "Loading...") : ( "No organization found" )
+          }
         />
         
         <NumberInput

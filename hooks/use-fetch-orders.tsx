@@ -6,6 +6,7 @@ import { useState } from "react";
 const UseFetchOrders = () => {
   const [orders, setOrders] = useState<IOrder[]>([]);
   const [orderHistory, setOrderHistory] = useState<IOrderHistory[]>([]);
+  const [pagedOrders, setPagedOrders] = useState<IOrderHistory[]>([]);
 
   const fetchOrders = async () => {
     try {
@@ -33,7 +34,29 @@ const UseFetchOrders = () => {
     }
   }
 
-  return { orders, orderHistory, fetchOrders, fetchOrderHistory };
+  const fetchPagedOrders = async (pageNumber: number, pageSize: number, isDeleted: boolean, search?: string, type?: string | null) => {
+    try{
+      var endpoint : string = `api/Order/Paged?pageNumber=${pageNumber}&pageSize=${pageSize}&isDeleted=${isDeleted}`
+      if(search){
+        endpoint += `&search=${search}`
+      }
+      if(type){
+        endpoint += `&type=${type}`
+      }
+
+      const { data: response } = await getData(endpoint)
+      if(response.status === "Success"){
+        const res : IOrderHistory[] = response.data;
+        return res;
+      }
+      
+      return [];
+    } catch(err){
+      console.error(err)
+    }
+  }
+
+  return { orders, orderHistory, pagedOrders, fetchOrders, fetchOrderHistory, fetchPagedOrders };
 };
 
 export default UseFetchOrders;

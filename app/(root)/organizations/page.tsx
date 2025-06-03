@@ -1,46 +1,76 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Box, Button, Container, Input } from "@mantine/core";
+import { IconX, IconCheck } from "@tabler/icons-react";
+import { Notification } from "@mantine/core";
+
 import UseFetchOrganizations from "@/hooks/use-fetch-organizations";
-import { Box, Button, Container, Input, LoadingOverlay } from "@mantine/core";
 import OrganizationCard from "@/components/organization-card";
-import { InfiniteScroll } from "@/components/infinite-scroll";
+import AddOrganizationModal from "@/components/add-organization-modal";
+import { postData } from "@/utils/api";
+
 import {
   IAddOrganizationForm,
   IOrganization,
 } from "@/types/organization-types";
-import { postData } from "@/utils/api";
-import { IconX, IconCheck } from "@tabler/icons-react";
-import { Notification } from "@mantine/core";
 import { IResponse } from "@/types/api-response-types";
-import AddOrganizationModal from "@/components/add-organization-modal";
+import { useDebounce } from "use-debounce";
+
+const PAGE_SIZE = 15;
 
 export default function OrganizationPage() {
   const [search, setSearch] = useState("");
+  const [searchDebounce] = useDebounce(search, 1000);
+  const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setModalOpen] = useState(false);
+
   const [status, setStatus] = useState<"success" | "error" | null>(null);
   const [message, setMessage] = useState<string>("");
-  const [visible, setVisible] = useState(false);
 
-  const { organizations, fetchOrganizations } = UseFetchOrganizations();
+  const [pagedOrganizations, setPagedOrganizations] = useState<IOrganization[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  const { fetchOrganizations, fetchPagedOrganizations } = UseFetchOrganizations();
   
-
   useEffect(() => {
-    async function fetchData() {
-      setVisible(true);
-      await Promise.all([fetchOrganizations()]);
-      setVisible(false);
-    }
-    fetchData();
-  }, []);
+    const fetchInitialData = async () => {
+      setIsLoading(true);
+      setPagedOrganizations([]);
+      setPage(1);
+      setHasMore(true);
+      loadMoreOrganizations(1);
+      setIsLoading(false);
+    };
 
-  const filteredOrganizations = organizations.filter((org) =>
-    org.name.toLowerCase().includes(search.toLowerCase())
-  );
+    fetchInitialData();
+  }, [searchDebounce]);
+
+  
+  const loadMoreOrganizations = async (pageNumber: number) => {
+    const newItems = await fetchPagedOrganizations(pageNumber, PAGE_SIZE, searchDebounce) || [];
+
+    if (newItems.length === 0) {
+      setHasMore(false);
+    } else {
+      // setPagedOrganizations((prev) => [...prev, ...newItems]);
+      setPagedOrganizations((prev) => {
+        const existingIds = new Set(prev.map((org) => org.id));
+        const filteredNewItems = newItems.filter((org) => !existingIds.has(org.id));
+        return [...prev, ...filteredNewItems];
+      });
+      setPage(pageNumber);
+    }
+  };
+
+  const handleLoadMore = () => {
+    loadMoreOrganizations(page + 1);
+  };
 
   const handleSubmit = async (data: IAddOrganizationForm) => {
     try {
-      const res = await postData(`api/organization`, {
+      const res = await postData("api/organization", {
         name: data.name,
         email: data.email,
         phone: data.phone,
@@ -51,7 +81,12 @@ export default function OrganizationPage() {
       if (response.status === "Success") {
         setMessage(response.message);
         setStatus("success");
-        fetchOrganizations();
+        await fetchOrganizations();
+        
+        setPagedOrganizations([]);
+        setPage(1);
+        setHasMore(true);
+        await loadMoreOrganizations(1);
       } else {
         setMessage(response.message);
         setStatus("error");
@@ -60,6 +95,7 @@ export default function OrganizationPage() {
       setStatus("error");
       console.log("Error: ", error);
     }
+
     setTimeout(() => setStatus(null), 3000);
   };
 
@@ -69,13 +105,7 @@ export default function OrganizationPage() {
         <div className="fixed top-24 right-2 sm:right-5 z-[9999]">
           <Notification
             withCloseButton={false}
-            icon={
-              status === "success" ? (
-                <IconCheck size={20} />
-              ) : (
-                <IconX size={20} />
-              )
-            }
+            icon={status === "success" ? <IconCheck size={20} /> : <IconX size={20} />}
             color={status === "success" ? "teal" : "red"}
             withBorder
             title={status === "success" ? "Success" : "Error"}
@@ -96,47 +126,40 @@ export default function OrganizationPage() {
         className="flex-1"
         placeholder="Search organizations..."
         value={search}
-        onChange={(event) => setSearch(event.currentTarget.value)}
-        rightSection={
-          search !== "" ? (
-            <Input.ClearButton onClick={() => setSearch("")} />
-          ) : undefined
-        }
+        onChange={(e) => setSearch(e.currentTarget.value)}
+        rightSection={search !== "" ? <Input.ClearButton onClick={() => setSearch("")} /> : undefined}
         rightSectionPointerEvents="auto"
         size="md"
       />
 
       <Box pos="relative" style={{ minHeight: "50px" }}>
-        <LoadingOverlay
-          visible={visible}
-          zIndex={1000}
-          overlayProps={{ radius: "sm", blur: 2 }}
-        />
         <Container
           fluid
           py="md"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          <InfiniteScroll<IOrganization>
-            data={filteredOrganizations}
-            itemsPerPage={24}
-            loader={
-              <div className="text-center py-4">
-                Loading more organizations...
-              </div>
-            }
-            endMessage={""}
-            renderItem={(org) => (
-              <div key={org.id} className="w-full">
-                <OrganizationCard
-                  organization={org}
-                  onDeleted={fetchOrganizations}
-                />
-              </div>
-            )}
-          />
+          {pagedOrganizations.map((org) => (
+            <div key={org.id} className="w-full">
+              <OrganizationCard
+                organization={org}
+                onDeleted={async () => {
+                  await fetchOrganizations();
+                  setPagedOrganizations((prev) => prev.filter((o) => o.id !== org.id));
+                }}
+              />
+            </div>
+          ))}
         </Container>
+
+        {hasMore && (
+          <div className="flex justify-center my-4">
+            <Button onClick={handleLoadMore} loading={isLoading}>
+              Load More
+            </Button>
+          </div>
+        )}
       </Box>
+
       <AddOrganizationModal
         isOpen={isModalOpen}
         onClose={() => setModalOpen(false)}

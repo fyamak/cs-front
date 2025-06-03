@@ -22,7 +22,7 @@ const sidebarItems = [
   { name: 'Organizations', href: '/organizations', icon: Users },
   { name: 'Transactions', href: '/transactions', icon: History },
   { name: 'Settings', href: '/settings', icon: Settings },
-  { name: 'Try', href: '/try', icon: Shapes },
+  // { name: 'Try', href: '/try', icon: Shapes },
 ]
 
 export default function Sidebar() {
