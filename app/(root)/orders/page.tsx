@@ -14,62 +14,73 @@ import {
 } from "@mantine/core";
 import { IconX, IconCheck } from "@tabler/icons-react";
 import { useAppContext } from "@/context";
-import Link from "next/link";
 import UseFetchOrders from "@/hooks/use-fetch-orders";
-import UseFetchOrganizations from "@/hooks/use-fetch-organizations";
-import UseFetchProducts from "@/hooks/use-fetch-products";
 import AddOrderModal from "@/components/add-order-modal";
-import { InfiniteScroll } from "@/components/infinite-scroll";
-import { IOrder } from "@/types/order-types";
+import { IOrderHistory } from "@/types/order-types";
 import { useMediaQuery } from "@mantine/hooks";
 import { useDebounce } from "use-debounce";
 import OrderCard from "@/components/order-card";
 
+const PAGE_SIZE = 50;
+
 export default function OrderPage() {
   const isMobile = useMediaQuery("(max-width: 50em)");
 
-  const [orderType, setOrderType] = useState<string | null>("all");
+  const [orderType, setOrderType] = useState<string | null>("");
   const [search, setSearch] = useState("");
-  const [searchDebounce] = useDebounce(search, 500);
+  const [searchDebounce] = useDebounce(search, 1000);
+  const [isLoading, setIsLoading] = useState(false);
+
   const [isModalOpen, setModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
   const [status, setStatus] = useState<"success" | "error" | null>(null);
   const [message, setMessage] = useState<string>("");
   const [visible, setVisible] = useState(false);
 
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
   const { currency } = useAppContext();
-  const { orders, fetchOrders } = UseFetchOrders();
-  const { organizations, organizationMap, fetchOrganizations } =
-    UseFetchOrganizations();
-  const { products, productMap, fetchProducts } = UseFetchProducts();
+  const { fetchPagedOrders } = UseFetchOrders();
+  const [pagedOrders, setPagedOrders] = useState<IOrderHistory[]>([]);
 
-    useEffect(() => {
-    async function fetchData() {
-      setVisible(true);
-      await Promise.all([fetchOrganizations(), fetchProducts(),fetchOrders()]);
-      setVisible(false);
+
+  useEffect(()=> {
+    setIsLoading(true);
+  },[search])
+  
+  useEffect(() => {
+    setPagedOrders([]);
+    setPage(1);
+    loadMoreOrders(1);
+    setHasMore(true);
+  }, [searchDebounce, orderType]);
+
+
+  const loadMoreOrders = async (pageNumber: number) => {
+    const newItems = await fetchPagedOrders(pageNumber, PAGE_SIZE, false, searchDebounce, orderType) || [];
+    if (newItems?.length === 0) {
+      setHasMore(false);
+    } else {
+      setPagedOrders((prev) => {
+        const existingIds = new Set(prev.map((order) => order.id));
+        const filteredNewItems = newItems?.filter((order) => !existingIds.has(order.id));
+        return [...prev, ...filteredNewItems];
+      });
+      setPage(pageNumber);
     }
-    fetchData();
-  }, []);
+    setIsLoading(false);
+  };
 
-  const filteredOrders = orders.filter((order) => {
-    const lowerSearch = searchDebounce.toLowerCase();
-    const productName = productMap.get(order.productId)?.toLowerCase() || "";
-    const organizationName =
-      organizationMap.get(order.organizationId)?.toLowerCase() || "";
-    const matchesSearch =
-      productName.includes(lowerSearch) ||
-      organizationName.includes(lowerSearch);
-    const matchesCategory =
-      orderType === "all" ||
-      order.type.toLowerCase() === orderType?.toLowerCase();
+  const handleLoadMore = () => {
+    loadMoreOrders(page + 1);
+  };
 
-    return matchesSearch && matchesCategory;
-  });
 
   const handleApprove = async (orderId: number) => {
     setIsProcessing(true);
-    const approvedOrder = orders.find((order) => order.id === orderId);
+    const approvedOrder = pagedOrders.find((order) => order.id === orderId);
     try {
       const endpoint = `products/${approvedOrder?.productId}/${approvedOrder?.type}`;
       const res = await postData(endpoint, {
@@ -77,14 +88,14 @@ export default function OrderPage() {
         quantity: approvedOrder?.quantity,
         price: approvedOrder?.price,
         date: approvedOrder?.date,
-        orderId: orderId,
+        orderId: approvedOrder?.id,
       });
       const response = res.data;
 
       if (response.status === "Success") {
         setMessage(response.message);
         setStatus("success");
-        fetchOrders();
+        setPagedOrders((prevOrders) => prevOrders.filter((order) => order.id !== orderId));
       } else {
         setMessage(response.message);
         setStatus("error");
@@ -108,7 +119,7 @@ export default function OrderPage() {
       if (response.status === "Success") {
         setMessage(response.message);
         setStatus("success");
-        fetchOrders();
+        setPagedOrders((prevOrders) => prevOrders.filter((order) => order.id !== orderId));
       } else {
         setMessage(response.message);
         setStatus("error");
@@ -128,7 +139,7 @@ export default function OrderPage() {
     setMessage(message);
     setStatus(status);
     setTimeout(() => setStatus(null), 3000);
-    fetchOrders();
+    setSearch("");
   };
 
   return (
@@ -160,9 +171,9 @@ export default function OrderPage() {
           }`}
         >
           <h1 className="text-3xl font-bold">Orders</h1>
-          <Link href="orders/history" className="flex items-center px-4 py-2">
+          {/* <Link href="orders/history" className="flex items-center px-4 py-2">
             <History className="w-7 h-7 ml-2 sm:ml-0 sm:mr-1" />
-          </Link>
+          </Link> */}
         </div>
 
         <Button
@@ -197,8 +208,8 @@ export default function OrderPage() {
             { value: "supply", label: "Supply" },
             { value: "sale", label: "Sale" },
           ]}
-          value={orderType === "all" ? null : orderType}
-          onChange={(value) => setOrderType(value ?? "all")}
+          value={orderType}
+          onChange={setOrderType}
           size={isMobile ? "sm" : "md"}
         />
       </div>
@@ -216,40 +227,25 @@ export default function OrderPage() {
             py="md"
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
-            <InfiniteScroll<IOrder>
-              data={filteredOrders}
-              itemsPerPage={24}
-              loader={
-                <div className="text-center py-4">Loading more orders...</div>
-              }
-              endMessage={""}
-              renderItem={(order) => (
-                <div key={order.id} className="w-full">
-                  <OrderCard
-                    key={order.id}
-                    id={order.id}
-                    productName={
-                      productMap.get(order.productId) ?? "Unknown Product"
-                    }
-                    organizationName={
-                      organizationMap.get(order.organizationId) ??
-                      "Unknown Organization"
-                    }
-                    quantity={order.quantity}
-                    price={order.price}
-                    date={
-                      order.date.substring(0, 10) +
-                      " " +
-                      order.date.substring(11, 16)
-                    }
-                    type={order.type}
-                    onApprove={handleApprove}
-                    onReject={handleReject}
-                    isProcessing={isProcessing}
-                  />
-                </div>
-              )}
-            />
+            {pagedOrders.map((order) => (
+              <OrderCard
+                key={order.id}
+                id={order.id}
+                productName={order.productName}
+                organizationName={order.organizationName}
+                quantity={order.quantity}
+                price={order.price}
+                date={
+                  order.date.substring(0, 10) +
+                  " " +
+                  order.date.substring(11, 16)
+                }
+                type={order.type}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                isProcessing={isProcessing}
+              />
+            ))}
           </Container>
         ) : (
           <div className="overflow-x-auto rounded-md border">
@@ -266,20 +262,14 @@ export default function OrderPage() {
                 </tr>
               </thead>
               <tbody>
-                <InfiniteScroll<IOrder>
-                  data={filteredOrders}
-                  itemsPerPage={50}
-                  loader={""}
-                  endMessage={""}
-                  isTable={true}
-                  renderItem={(order) => (
+                {
+                  pagedOrders.map((order) => (
                     <tr key={order.id} className="border-b">
                       <td className="px-4 py-2 font-medium">
-                        {productMap.get(order.productId) ?? "Unknown Product"}
+                        {order.productName}
                       </td>
                       <td className="px-4 py-2">
-                        {organizationMap.get(order.organizationId) ??
-                          "Unknown Organization"}
+                        {order.organizationName}
                       </td>
                       <td className="px-4 py-2">{order.quantity}</td>
                       <td className="px-4 py-2">
@@ -309,16 +299,23 @@ export default function OrderPage() {
                         </button>
                       </td>
                     </tr>
-                  )}
-                />
+                  ))
+                }
               </tbody>
             </table>
           </div>
         )}
+
+        {hasMore && (
+          <div className="flex justify-center my-4">
+            <Button onClick={handleLoadMore} loading={isLoading}>
+              Load More
+            </Button>
+          </div>
+        )}
+
         <AddOrderModal
           isOpen={isModalOpen}
-          products={products}
-          organizations={organizations}
           onClose={() => setModalOpen(false)}
           onSubmit={handleModalSubmit}
         />

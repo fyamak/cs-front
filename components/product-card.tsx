@@ -1,11 +1,14 @@
 import { IProductCard } from "@/types/product-types";
 import { Card, Text, Badge, Divider} from "@mantine/core";
+import Link from "next/link";
 
 export default function ProductCard(product : IProductCard) {
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
-
-      <Text fw={500}>{product.name}</Text>
+      
+      <Link href={`/product/${product.id}`} className="font-semibold hover:underline">
+        <Text fw={500}>{product.name}</Text>
+      </Link>
 
       <Divider my="xs" />
       

@@ -19,9 +19,11 @@
     "axios": "^1.8.2",
     "dayjs": "^1.11.13",
     "immer": "^10.1.1",
+    "install": "^0.13.0",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.488.0",
     "next": "15.2.1",
+    "npm": "^11.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-imask": "^7.6.1",
@@ -29,6 +31,7 @@
     "react-virtualized": "^9.22.6",
     "react-virtualized-auto-sizer": "^1.0.26",
     "react-window": "^1.8.11",
+    "recharts": "^2.15.3",
     "use-debounce": "^10.0.4"
   },
   "devDependencies": {

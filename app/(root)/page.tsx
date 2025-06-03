@@ -14,13 +14,18 @@ import {
   HandCoins,
 } from "lucide-react";
 import {
-  Card,
-  Text,
-  Group,
-  Container,
-} from "@mantine/core";
-import { useRouter } from "next/navigation";
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
+import { Card, Text, Group, Container } from "@mantine/core";
+import { useRouter } from "next/navigation";
 
 interface Dashboard {
   productCount: number;
@@ -31,6 +36,11 @@ interface Dashboard {
   monthlySupplyExpense: number;
   monthlySalesRevenue: number;
   monthlyProfit: number;
+  dailyFinance: {
+    dates: Date[];
+    dailyRevenue: number[];
+    dailyExpense: number[];
+  };
   lastProcessedOrders: [
     {
       orderId: number;
@@ -44,7 +54,7 @@ interface Dashboard {
 export default function Home() {
   const [dashInfo, setDashInfo] = useState<Dashboard>();
   const { currency, setCurrency } = useAppContext();
-  const router = useRouter()
+  const router = useRouter();
 
   useEffect(() => {
     fetchProductCount();
@@ -162,46 +172,70 @@ export default function Home() {
           <Text size="lg" fw={500} mb="sm">
             Inventory Overview
           </Text>
-          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-            Chart will be implemented here
-          </div>
+          {dashInfo?.dailyFinance ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart
+                data={dashInfo.dailyFinance.dates.map((date, index) => ({
+                  date: new Date(date).toLocaleDateString(),
+                  revenue: dashInfo.dailyFinance.dailyRevenue[index],
+                  expense: dashInfo.dailyFinance.dailyExpense[index],
+                }))}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="revenue" stroke="#4ade80" name="Revenue" />
+                <Line type="monotone" dataKey="expense" stroke="#f87171" name="Expense" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+              Loading chart...
+            </div>
+          )}
         </Card>
 
-        <Card
-  className="col-span-3"
-  shadow="sm"
-  padding="md"
-  radius="md"
-  withBorder
->
-  <div className="flex items-center justify-between mb-4">
-    <Text size="lg" fw={500}>
-      Recent Activities
-    </Text>
-    <button
-      onClick={() => router.push("/orders/history")}
-      className="text-sm text-blue-600 hover:underline"
-    >
-      Show All
-    </button>
-  </div>
 
-  <div className="space-y-4 py-4">
-    {dashInfo?.lastProcessedOrders.map((o, index) => (
-      <div key={o.orderId || index} className="flex items-center space-x-3">
-        <div className="h-2 w-2 rounded-full bg-primary" />
-        <div className="flex-1 space-y-1">
-          <p>
-            {o.detail} ({o.productName})
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {getTimeAgo(o.updatedAt)}
-          </p>
-        </div>
-      </div>
-    ))}
-  </div>
-</Card>
+        <Card
+          className="col-span-3"
+          shadow="sm"
+          padding="md"
+          radius="md"
+          withBorder
+        >
+          <div className="flex items-center justify-between mb-4">
+            <Text size="lg" fw={500}>
+              Recent Activities
+            </Text>
+            <button
+              onClick={() => router.push("/transactions")}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Show All
+            </button>
+          </div>
+
+          <div className="space-y-4 py-4">
+            {dashInfo?.lastProcessedOrders.map((o, index) => (
+              <div
+                key={o.orderId || index}
+                className="flex items-center space-x-3"
+              >
+                <div className="h-2 w-2 rounded-full bg-primary" />
+                <div className="flex-1 space-y-1">
+                  <p>
+                    {o.detail} ({o.productName})
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {getTimeAgo(o.updatedAt)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
     </div>
   );
