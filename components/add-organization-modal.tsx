@@ -41,7 +41,7 @@ export default function AddOrganizationModal({isOpen, onClose, onSubmit }: Props
       >
         <TextInput
           label="Name"
-          placeholder="Jhon Due"
+          placeholder="Organization Name"
           key={form.key("name")}
           {...form.getInputProps("name")}
           role="presentation" 
@@ -49,8 +49,8 @@ export default function AddOrganizationModal({isOpen, onClose, onSubmit }: Props
           required
         />
         <TextInput
-          label="email"
-          placeholder="johndue@example.com"
+          label="Email"
+          placeholder="org@example.com"
           mt="md"
           key={form.key("email")}
           {...form.getInputProps("email")}

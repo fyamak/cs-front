@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import AddProductModal from "@/components/add-product-modal";
 import UseFetchProducts from "@/hooks/use-fetch-products";
@@ -21,6 +21,7 @@ const CATEGORY_PAGE_SIZE = 20;
 
 export default function ProductPage() {
   const isMobile = useMediaQuery("(max-width: 50em)");
+  const isFirstRender = useRef(true);
 
   const [productSearch, setProductSearch] = useState("");
   const [productSearchDebounce] = useDebounce(productSearch, 1000);
@@ -39,7 +40,19 @@ export default function ProductPage() {
   const [status, setStatus] = useState<"success" | "error" | null>(null);
   const [message, setMessage] = useState<string>("");
 
+  useEffect(() => {
+  const fetchData = async () => {
+    setVisible(true);
+    await fetchPagedProducts(1, PRODUCT_PAGE_SIZE);
+    setVisible(false);
+    isFirstRender.current = false;
+  }
+  fetchData()
+}, []);
+
   useEffect(()=>{
+    if (isFirstRender.current) return; // Skip on first render
+
     const fetchData = async () => {
       setVisible(true);
       await fetchPagedProducts(activePage, PRODUCT_PAGE_SIZE, productSearchDebounce, Number(selectedCategory));
@@ -49,6 +62,8 @@ export default function ProductPage() {
   }, [activePage])
 
   useEffect(() => {
+    if (isFirstRender.current) return; // Skip on first render
+
     const fetchData = async () => {
       setVisible(true);
       setActivePage(1);
@@ -62,6 +77,7 @@ export default function ProductPage() {
   useEffect(()=> {
     setIsCategoryLoading(true)
   }, [categorySearch])
+
   useEffect(()=> {
     fetchPagedCategories(1, CATEGORY_PAGE_SIZE, categorySearchDebounce)
     setIsCategoryLoading(false)
@@ -70,9 +86,8 @@ export default function ProductPage() {
 
 
   const categoryOptions = pagedCategories.map((c) => ({
-    value: c.id.toString(), // convert ID to string for Select
+    value: c.id.toString(),
     label: c.name,
-    // (c.name)
   }));
 
  

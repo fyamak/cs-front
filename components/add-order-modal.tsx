@@ -1,7 +1,5 @@
 import { Modal, Button, Select, NumberInput } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { IProduct } from "@/types/product-types";
-import { IOrganization } from "@/types/organization-types";
 import { DateTimePicker } from '@mantine/dates';
 import { postData } from "@/utils/api";
 import { useEffect, useState } from "react";
@@ -49,10 +47,12 @@ export default function AddOrderModal({ isOpen, onClose, onSubmit }: Props) {
   }, [searchProduct]);
 
   useEffect(() => {
-    fetchPagedProducts(1,PAGE_SIZE, searchProductDebounce).finally(() =>
-      setLoadingProduct(false)
-    );
-  }, [searchProductDebounce]);
+    if (isOpen) {
+      fetchPagedProducts(1,PAGE_SIZE, searchProductDebounce).finally(() =>
+        setLoadingProduct(false)
+      );
+    }
+  }, [isOpen, searchProductDebounce]);
 
 
   useEffect(() => {
@@ -60,10 +60,12 @@ export default function AddOrderModal({ isOpen, onClose, onSubmit }: Props) {
   }, [searchOrganization]);
 
   useEffect(() => {
-    fetchPagedOrganizations(1,PAGE_SIZE, searchOrganizationDebounce).finally(() =>
-      setLoadingOrganization(false)
-    );
-  }, [searchOrganizationDebounce]);
+    if (isOpen) {
+      fetchPagedOrganizations(1,PAGE_SIZE, searchOrganizationDebounce).finally(() =>
+        setLoadingOrganization(false)
+      );
+    }
+  }, [isOpen, searchOrganizationDebounce]);
 
 
   const form = useForm({
@@ -174,7 +176,7 @@ export default function AddOrderModal({ isOpen, onClose, onSubmit }: Props) {
 
         <DateTimePicker
           label="Date"
-          placeholder="01/01/1970 00:00"
+          placeholder="01/01/2025 00:00"
           clearable
           required
           mb={"md"}

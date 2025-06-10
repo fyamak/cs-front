@@ -36,7 +36,6 @@ export default function OrderPage() {
 
   const [status, setStatus] = useState<"success" | "error" | null>(null);
   const [message, setMessage] = useState<string>("");
-  const [visible, setVisible] = useState(false);
 
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -51,6 +50,7 @@ export default function OrderPage() {
   },[search])
   
   useEffect(() => {
+    console.log("Fetching orders with search:", searchDebounce, "and type:", orderType);
     setPagedOrders([]);
     setPage(1);
     loadMoreOrders(1);
@@ -59,6 +59,7 @@ export default function OrderPage() {
 
 
   const loadMoreOrders = async (pageNumber: number) => {
+    console.log("Loading more orders for page:", pageNumber);
     const newItems = await fetchPagedOrders(pageNumber, PAGE_SIZE, false, searchDebounce, orderType) || [];
     if (newItems?.length === 0) {
       setHasMore(false);
@@ -215,11 +216,11 @@ export default function OrderPage() {
       </div>
 
       <Box pos="relative" style={{minHeight:"50px"}}>
-        <LoadingOverlay
-          visible={visible}
+        {/* <LoadingOverlay
+          visible={isLoading}
           zIndex={1000}
           overlayProps={{ radius: "sm", blur: 2 }}
-        />
+        /> */}
 
         {isMobile ? (
           <Container
