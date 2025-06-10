@@ -35,10 +35,12 @@ export default function AddProductModal({ isOpen, onClose, onSubmit }: Props) {
   }, [searchValue]);
 
   useEffect(() => {
-    fetchPagedCategories(1,CATEGORY_PAGE_SIZE, searchDebounce).finally(() =>
-      setLoading(false)
-    );
-  }, [searchDebounce]);
+    if(isOpen){
+      fetchPagedCategories(1,CATEGORY_PAGE_SIZE, searchDebounce).finally(() =>
+        setLoading(false)
+      );
+    }
+  }, [isOpen, searchDebounce]);
 
   const handleSubmit = () => {
     onSubmit({
@@ -95,7 +97,7 @@ export default function AddProductModal({ isOpen, onClose, onSubmit }: Props) {
         onSearchChange={setSearchValue}
         data={categoryOptions}
         label="Category"
-        placeholder="Pick value"
+        placeholder="Select Category"
         limit={20}
         mt="md"
         nothingFoundMessage={
